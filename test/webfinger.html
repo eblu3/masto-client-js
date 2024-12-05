@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>webfinger test</title>
+	</head>
+	<body>
+		<label for="acct">Account handle</label>
+		<input type="text" name="acct" id="acct" pattern="@\w+@\w+\.\w+" required />
+		<button id="send-button">Send</button>
+		<p id="write-target"></p>
+
+		<script>
+			document.getElementById("send-button").addEventListener("click", (event) => {
+				resolveWebfinger(document.getElementById("acct").value).then((response) => {
+					document.getElementById("write-target").innerHTML = `<a href=${response.json.aliases[0]}>Profile link</a><br>${JSON.stringify(response.json)}`;
+				});
+			});
+
+			async function resolveWebfinger(acct) {
+				const parts = acct.split("@");
+				let urlRoot = `https://${parts[parts.length - 1]}`;
+				let url = "";
+
+				if(acct.substring(0, 1) == "@") {
+					url = `${urlRoot}/.well-known/webfinger?resource=acct:${acct.substring(1)}`;
+				} else {
+					url = `${urlRoot}/.well-known/webfinger?resource=acct:${acct}`;
+				}
+
+				const response = await fetch(url);
+				const json = await response.json();
+
+				return {urlRoot, json};
+			}
+		</script>
+	</body>
+</html>

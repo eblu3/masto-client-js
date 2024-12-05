@@ -20,7 +20,7 @@ export var timeline;
 export var tag;
 let token = env.token;
 let lastStatusId = "";
-function getTimeline(url, endpoint, tag, startAtId) {
+export function getTimeline(url, endpoint, tag, startAtId) {
     return __awaiter(this, void 0, void 0, function* () {
         let newEndpoint = endpoint;
         if (endpoint === Timelines.Hashtag) {
@@ -57,7 +57,33 @@ function getTimeline(url, endpoint, tag, startAtId) {
         }
     });
 }
-function getStatus(id) {
+export function getAccountTimeline(id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            let response;
+            if (token) {
+                response = yield fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl), {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+            }
+            else {
+                response = yield fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl));
+            }
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            const timeline = yield response.json();
+            return timeline;
+        }
+        catch (error) {
+            console.error(error.message);
+            return null;
+        }
+    });
+}
+export function getStatus(id) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             let response;
@@ -83,7 +109,7 @@ function getStatus(id) {
         }
     });
 }
-function getAccount(id) {
+export function getAccount(id) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             let response;
@@ -96,6 +122,32 @@ function getAccount(id) {
             }
             else {
                 response = yield fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
+            }
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            const account = new mastodon.Account(yield response.json());
+            return account;
+        }
+        catch (error) {
+            console.error(error.message);
+            return null;
+        }
+    });
+}
+export function getAccountByHandle(acct) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            let response;
+            if (token) {
+                response = yield fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl), {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+            }
+            else {
+                response = yield fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl));
             }
             if (!response.ok) {
                 throw new Error(`Response status: ${response.status}`);
@@ -205,10 +257,10 @@ function renderStatusAccountInfo(account) {
     avatar.setAttribute("src", account.avatar.toString());
     displayName.setAttribute("class", "display-name");
     if (account.displayName) {
-        displayName.innerHTML = `<a href=\"${account.url.toString()}\">${renderEmojis(account.displayName, account.emojis)}</a>`;
+        displayName.innerHTML = `<a href=\"/user/?acct=${account.acct}\">${renderEmojis(account.displayName, account.emojis)}</a>`;
     }
     else {
-        displayName.innerHTML = `<a href=\"${account.url.toString()}\">${account.username}</a>`;
+        displayName.innerHTML = `<a href=\"/user/?acct=${account.acct}\">${account.username}</a>`;
     }
     handle.setAttribute("class", "account-handle");
     handle.innerText = `@${account.acct}`;
@@ -238,6 +290,16 @@ function renderCard(card) {
     cardContainer.appendChild(cardTitle);
     cardContainer.appendChild(cardDesc);
     out.appendChild(cardContainer);
+    return out;
+}
+function renderProfileInfo(account) {
+    let out = document.createElement("div");
+    out.setAttribute("class", "profile-info");
+    out.style.backgroundImage = `url(\"${account.header.href}\"`;
+    let avatar = document.createElement("img");
+    avatar.setAttribute("class", "avatar");
+    avatar.setAttribute("src", account.avatar.href);
+    out.appendChild(avatar);
     return out;
 }
 function renderStatus(status, label) {
@@ -309,6 +371,16 @@ export function renderTimeline() {
         lastStatusId = data[data.length - 1]["id"];
     });
 }
+export function renderAccountTimeline(id) {
+    getAccountTimeline(id).then((data) => {
+        let statuses = new DocumentFragment();
+        for (const status of data) {
+            statuses.appendChild(renderStatus(new mastodon.Status(status)));
+        }
+        document.getElementById("timeline").appendChild(statuses);
+        lastStatusId = data[data.length - 1]["id"];
+    });
+}
 export function renderStatusPage(id) {
     getStatus(id).then((status) => {
         document.body.appendChild(renderStatus(status));
@@ -317,10 +389,13 @@ export function renderStatusPage(id) {
 export function renderAccountPage(id, acct) {
     if (id) {
         getAccount(id).then((account) => {
-            console.log(account);
+            document.body.insertBefore(renderProfileInfo(account), document.getElementById("timeline"));
         });
     }
     else if (acct) {
+        getAccountByHandle(acct).then((account) => {
+            document.body.insertBefore(renderProfileInfo(account), document.getElementById("timeline"));
+        });
     }
 }
 export function setTimeline(endpoint) {
@@ -331,5 +406,11 @@ export function setTag(newTag) {
 }
 export function resetLastStatus() {
     lastStatusId = "";
+}
+export function getAccountIdFromHandle(acct) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const account = yield getAccountByHandle(acct);
+        return account.id;
+    });
 }
 //# sourceMappingURL=masto_ts.js.map

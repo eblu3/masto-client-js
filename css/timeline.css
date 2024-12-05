@@ -3,6 +3,7 @@
 	--foreground-color: #eee;
 
 	--surface-color: #2e2e41;
+	--surface-color-lighter: #3b3b52;
 
 	--accent-color: #ccaaff;
 	--accent-color-lighter: #e2d2fc;
@@ -15,6 +16,8 @@
 }
 
 body {
+	margin: 0;
+
 	background-color: var(--background-color);
 	color: var(--foreground-color);
 
@@ -38,6 +41,10 @@ body > header {
 	background-color: var(--background-color);
 
 	border-bottom: 1px solid var(--accent-color);
+}
+
+main {
+	margin: 0 1em;
 }
 
 body > article, #timeline > article, #post-input-container {

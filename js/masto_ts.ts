@@ -15,7 +15,7 @@ let token = env.token;
 
 let lastStatusId: string = "";
 
-async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string) {
+export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string) {
 	let newEndpoint: string = endpoint;
 	
 	if(endpoint === Timelines.Hashtag) {
@@ -57,7 +57,34 @@ async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtI
 	}
 }
 
-async function getStatus(id: string): Promise<mastodon.Status> | null {
+export async function getAccountTimeline(id: string): Promise<mastodon.Status[]> | null {
+	try {
+		let response;
+
+		if(token) {
+			response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl));
+		}
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const timeline = await response.json();
+
+		return timeline;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getStatus(id: string): Promise<mastodon.Status> | null {
 	try {
 		let response;
 
@@ -84,7 +111,7 @@ async function getStatus(id: string): Promise<mastodon.Status> | null {
 	}
 }
 
-async function getAccount(id: string): Promise<mastodon.Account> | null {
+export async function getAccount(id: string): Promise<mastodon.Account> | null {
 	try {
 		let response;
 
@@ -96,6 +123,33 @@ async function getAccount(id: string): Promise<mastodon.Account> | null {
 			});
 		} else {
 			response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
+		}
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const account = new mastodon.Account(await response.json());
+
+		return account;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getAccountByHandle(acct: string) {
+	try {
+		let response;
+
+		if(token) {
+			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl));
 		}
 
 		if(!response.ok) {
@@ -233,9 +287,9 @@ function renderStatusAccountInfo(account: mastodon.Account): HTMLElement {
 
 	displayName.setAttribute("class", "display-name");
 	if(account.displayName) {
-		displayName.innerHTML = `<a href=\"${account.url.toString()}\">${renderEmojis(account.displayName, account.emojis)}</a>`;
+		displayName.innerHTML = `<a href=\"/user/?acct=${account.acct}\">${renderEmojis(account.displayName, account.emojis)}</a>`;
 	} else {
-		displayName.innerHTML = `<a href=\"${account.url.toString()}\">${account.username}</a>`;
+		displayName.innerHTML = `<a href=\"/user/?acct=${account.acct}\">${account.username}</a>`;
 	}
 
 	handle.setAttribute("class", "account-handle");
@@ -278,6 +332,22 @@ function renderCard(card: mastodon.PreviewCard): HTMLElement {
 	cardContainer.appendChild(cardDesc);
 
 	out.appendChild(cardContainer);
+
+	return out;
+}
+
+function renderProfileInfo(account: mastodon.Account): HTMLElement {
+	let out = document.createElement("div");
+
+	out.setAttribute("class", "profile-info");
+	out.style.backgroundImage = `url(\"${account.header.href}\"`;
+
+	let avatar = document.createElement("img");
+
+	avatar.setAttribute("class", "avatar");
+	avatar.setAttribute("src", account.avatar.href);
+
+	out.appendChild(avatar);
 
 	return out;
 }
@@ -384,6 +454,20 @@ export function renderTimeline() {
 	})
 }
 
+export function renderAccountTimeline(id: string) {
+	getAccountTimeline(id).then((data: mastodon.Status[]) => {
+		let statuses: DocumentFragment = new DocumentFragment();
+
+		for(const status of data) {
+			statuses.appendChild(renderStatus(new mastodon.Status(status)));
+		}
+
+		document.getElementById("timeline").appendChild(statuses);
+
+		lastStatusId = data[data.length - 1]["id"];
+	})
+}
+
 export function renderStatusPage(id: string) {
 	getStatus(id).then((status: mastodon.Status) => {
 		document.body.appendChild(renderStatus(status));
@@ -393,10 +477,12 @@ export function renderStatusPage(id: string) {
 export function renderAccountPage(id?: string, acct?: string) {
 	if(id) {
 		getAccount(id).then((account: mastodon.Account) => {
-			console.log(account);
+			document.body.insertBefore(renderProfileInfo(account), document.getElementById("timeline"));
 		});
 	} else if(acct) {
-		// TODO: implement account lookup via handle
+		getAccountByHandle(acct).then((account: mastodon.Account) => {
+			document.body.insertBefore(renderProfileInfo(account), document.getElementById("timeline"));
+		});
 	}
 }
 
@@ -410,6 +496,12 @@ export function setTag(newTag: string) {
 
 export function resetLastStatus() {
 	lastStatusId = "";
+}
+
+export async function getAccountIdFromHandle(acct: string): Promise<string> {
+	const account = await getAccountByHandle(acct);
+	
+	return account.id;
 }
 
 // window.onscroll = function(ev) {
