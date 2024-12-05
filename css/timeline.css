@@ -1,0 +1,127 @@
+:root {
+	--background-color: #181821;
+	--foreground-color: #eee;
+
+	--surface-color: #2e2e41;
+
+	--accent-color: #ccaaff;
+	--accent-color-lighter: #e2d2fc;
+	--accent-color-bg: #28202F;
+	--accent-color-bg-lighter: #38303F;
+	--accent-color-bg-lightest: #48404F;
+
+	--radius-large: 1em;
+	--radius-small: 0.5em;
+}
+
+body {
+	max-width: 1024px;
+	margin: auto;
+
+	background-color: var(--background-color);
+	color: var(--foreground-color);
+
+	font-family: sans-serif;
+}
+
+a {
+	color: var(--accent-color);
+}
+
+a:hover {
+	color: var(--accent-color-lighter);
+}
+
+#timeline > article {
+	margin: 1em;
+	padding: 1em;
+
+	background-color: var(--surface-color);
+
+	border-radius: var(--radius-large);
+	box-shadow: 0px 8px 8px rgba(0,0,0,0.5);
+
+	transition: height 0.5s ease-out;
+}
+
+article > img, article > video, article > details > img, article > details > video {
+	max-width: 100%;
+}
+
+article > address {
+	display: flex;
+}
+
+.avatar {
+	border-radius: 100%;
+}
+
+address .avatar {
+	max-height: 2.75em;
+	margin-right: 0.5em;
+}
+
+.post-label {
+	margin-bottom: 1em;
+}
+
+.inline-img, .custom-emoji {
+	max-height: 1.25em;
+	vertical-align: bottom;
+}
+
+.display-name {
+	font-weight: bold;
+}
+
+address .display-name {
+	font-size: 1.25em;
+}
+
+.content-warning {
+	padding: 1em;
+	margin-top: 1em;
+
+	background-color: var(--accent-color-bg);
+	background-image: radial-gradient(ellipse at bottom, var(--accent-color-bg-lighter), var(--accent-color-bg));
+	color: var(--accent-color);
+
+	border: 1px solid var(--accent-color);
+	border-radius: var(--radius-small);
+
+	font-weight: bold;
+
+	cursor: pointer;
+}
+
+.content-warning:hover {
+	background-color: var(--accent-color-bg-lighter);
+	background-image: radial-gradient(ellipse at bottom, var(--accent-color-bg-lightest), var(--accent-color-bg));
+	color: var(--accent-color-lighter);
+
+	border-color: var(--accent-color-lighter);
+}
+
+.embed-card {
+	padding: 1em;
+
+	background-color: var(--accent-color-bg);
+
+	border: 1px solid var(--accent-color);
+	border-radius: var(--radius-small);
+}
+
+.embed-card:hover {
+	background-color: var(--accent-color-bg-lighter);
+
+	border-color: var(--accent-color-lighter);
+}
+
+.embed-card > img {
+	margin-top: -1em;
+	margin-left: -1em;
+	width: calc(100% + 2em);
+	height: auto;
+
+	border-radius: var(--radius-small) var(--radius-small) 0 0;
+}
