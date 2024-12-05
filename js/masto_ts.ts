@@ -328,12 +328,16 @@ function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement
 	}
 
 	const statusTimeContainer = document.createElement("p");
+	const statusLink = document.createElement("a");
 	const statusTime = document.createElement("time");
+
+	statusLink.setAttribute("href", `/status/?id=${status.id}`);
 
 	statusTime.setAttribute("datetime", status.createdAt.toISOString());
 	statusTime.innerText = status.createdAt.toLocaleString();
 
-	statusTimeContainer.appendChild(statusTime);
+	statusLink.appendChild(statusTime);
+	statusTimeContainer.appendChild(statusLink);
 
 	out.appendChild(statusTimeContainer);
 
