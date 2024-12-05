@@ -241,12 +241,7 @@ function renderStatus(status, label) {
             summary.innerText = "⚠️ Sensitive content";
         }
         details.appendChild(summary);
-        if (status.card != null) {
-            details.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
-        }
-        else {
-            details.innerHTML += renderEmojis(status.content, status.emojis);
-        }
+        details.innerHTML += renderEmojis(status.content, status.emojis);
         if (status.mediaAttachments.length > 0) {
             for (const attachment of renderAttachments(status.mediaAttachments)) {
                 details.appendChild(attachment);
@@ -258,12 +253,7 @@ function renderStatus(status, label) {
         out.appendChild(details);
     }
     else {
-        if (status.card != null) {
-            out.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
-        }
-        else {
-            out.innerHTML += renderEmojis(status.content, status.emojis);
-        }
+        out.innerHTML += renderEmojis(status.content, status.emojis);
         if (status.mediaAttachments.length > 0) {
             for (const attachment of renderAttachments(status.mediaAttachments)) {
                 out.appendChild(attachment);

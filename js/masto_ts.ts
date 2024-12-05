@@ -292,11 +292,11 @@ function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement
 		}
 
 		details.appendChild(summary);
-		if(status.card != null) {
-			details.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
-		} else {
+		// if(status.card != null) {
+		// 	details.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
+		// } else {
 			details.innerHTML += renderEmojis(status.content, status.emojis);
-		}
+		// }
 
 		if(status.mediaAttachments.length > 0) {
 			for(const attachment of renderAttachments(status.mediaAttachments)) {
@@ -310,11 +310,11 @@ function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement
 
 		out.appendChild(details);
 	} else {
-		if(status.card != null) {
-			out.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
-		} else {
+		// if(status.card != null) {
+		// 	out.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
+		// } else {
 			out.innerHTML += renderEmojis(status.content, status.emojis);
-		}
+		// }
 
 		if(status.mediaAttachments.length > 0) {
 			for(const attachment of renderAttachments(status.mediaAttachments)) {
