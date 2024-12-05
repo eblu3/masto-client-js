@@ -40,7 +40,7 @@ body > header {
 	border-bottom: 1px solid var(--accent-color);
 }
 
-body > article, #timeline > article {
+body > article, #timeline > article, #post-input-container {
 	margin: 1em auto;
 	padding: 1em;
 

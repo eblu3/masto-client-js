@@ -3,6 +3,7 @@
 	<head>
 		<title>home</title>
 		<link rel="stylesheet" href="/css/timeline.css" />
+		<link rel="stylesheet" href="/css/homepage.css" />
 		<script async src="/js/masto_ts.js" type="module"></script>
 		<script src="/js/homepage.js" type="module"></script>
 	</head>
@@ -10,7 +11,9 @@
 		<header>
 			<h1>Home</h1>
 		</header>
-		<input type="text" /> <button id="post-button">Post</button>
+		<div id="post-input-container">
+			<textarea id="post-input" placeholder="What's up?"></textarea>
+		</div>
 		<main id="timeline"></main>
 		<button id="load-more-button">Load more</button>
 	</body>
