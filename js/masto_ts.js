@@ -15,7 +15,7 @@ export var Timelines;
     Timelines["Hashtag"] = "/api/v1/timelines/tag/";
     Timelines["Home"] = "/api/v1/timelines/home";
 })(Timelines || (Timelines = {}));
-export var instanceUrl;
+const instanceUrl = env.instanceUrl;
 export var timeline;
 export var tag;
 console.log(env.token);
@@ -295,9 +295,6 @@ export function renderStatusPage(id) {
     getStatus(id).then((status) => {
         document.body.appendChild(renderStatus(status));
     });
-}
-export function setInstanceUrl(url) {
-    instanceUrl = url;
 }
 export function setTimeline(endpoint) {
     timeline = endpoint;

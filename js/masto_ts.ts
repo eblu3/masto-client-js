@@ -7,7 +7,7 @@ export enum Timelines {
 	Home = "/api/v1/timelines/home"
 }
 
-export var instanceUrl: URL;
+const instanceUrl: URL = env.instanceUrl;
 export var timeline: Timelines;
 export var tag: string | null;
 
@@ -358,10 +358,6 @@ export function renderStatusPage(id: string) {
 	getStatus(id).then((status: mastodon.Status) => {
 		document.body.appendChild(renderStatus(status));
 	})
-}
-
-export function setInstanceUrl(url: URL) {
-	instanceUrl = url;
 }
 
 export function setTimeline(endpoint: Timelines) {

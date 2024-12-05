@@ -1,4 +1,4 @@
-import { setInstanceUrl, setTimeline, Timelines, setTag, renderTimeline, resetLastStatus } from "./masto_ts.js";
+import { setTimeline, Timelines, setTag, renderTimeline, resetLastStatus } from "./masto_ts.js";
 import { getInclude } from "./modules/includes.mjs";
 
 const tagToSearch = new URLSearchParams(document.location.search).get("tag");
@@ -14,7 +14,6 @@ document.getElementById("load-more-button").addEventListener("click", () => {
 	renderTimeline();
 });
 
-setInstanceUrl(new URL("https://wetdry.world"));
 setTimeline(Timelines.Hashtag);
 setTag(tagToSearch);
 
