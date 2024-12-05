@@ -4,11 +4,12 @@ import { getInclude } from "./modules/includes.mjs";
 const tagToSearch = new URLSearchParams(document.location.search).get("tag");
 
 document.title = `#${tagToSearch}`;
-document.getElementById("tag-header").innerText = `#${tagToSearch}`;
+
+(document.getElementById("tag-input") as HTMLInputElement).value = `${tagToSearch}`; 
 
 document.getElementById("tag-input").addEventListener("change", (event) => {
-	regenTimeline(event.target.value);
-})
+	regenTimeline((event.target as HTMLInputElement).value);
+});
 
 document.getElementById("load-more-button").addEventListener("click", () => {
 	renderTimeline();
@@ -23,7 +24,6 @@ function regenTimeline(tag?: string) {
 	if(tag) {
 		setTag(tag);
 		document.title = `#${tag}`;
-		document.getElementById("tag-header").innerText = `#${tag}`;
 
 		const url = new URL(location.href);
 		url.searchParams.set("tag", tag);
@@ -38,7 +38,7 @@ function regenTimeline(tag?: string) {
 }
 
 getInclude(new URL("/include/navbar.html", window.location.origin)).then((include: DocumentFragment) => {
-	document.body.prepend(include);
+	document.getElementsByTagName("header")[0].prepend(include);
 });
 
 renderTimeline();

@@ -8,7 +8,7 @@ document.getElementById("load-more-button").addEventListener("click", () => {
 setTimeline(Timelines.Home);
 
 getInclude(new URL("/include/navbar.html", window.location.origin)).then((include: DocumentFragment) => {
-	document.body.prepend(include);
+	document.getElementsByTagName("header")[0].prepend(include);
 });
 
 renderTimeline();

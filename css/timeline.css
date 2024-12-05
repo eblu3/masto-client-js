@@ -15,9 +15,6 @@
 }
 
 body {
-	max-width: 1024px;
-	margin: auto;
-
 	background-color: var(--background-color);
 	color: var(--foreground-color);
 
@@ -32,9 +29,22 @@ a:hover {
 	color: var(--accent-color-lighter);
 }
 
+body > header {
+	position: sticky;
+	top: 0;
+
+	padding: 0.5em 10vw;
+
+	background-color: var(--background-color);
+
+	border-bottom: 1px solid var(--accent-color);
+}
+
 body > article, #timeline > article {
-	margin: 1em;
+	margin: 1em auto;
 	padding: 1em;
+
+	max-width: 1024px;
 
 	background-color: var(--surface-color);
 

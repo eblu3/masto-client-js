@@ -2,7 +2,7 @@ import { setTimeline, Timelines, setTag, renderTimeline, resetLastStatus } from 
 import { getInclude } from "./modules/includes.mjs";
 const tagToSearch = new URLSearchParams(document.location.search).get("tag");
 document.title = `#${tagToSearch}`;
-document.getElementById("tag-header").innerText = `#${tagToSearch}`;
+document.getElementById("tag-input").value = `${tagToSearch}`;
 document.getElementById("tag-input").addEventListener("change", (event) => {
     regenTimeline(event.target.value);
 });
@@ -16,7 +16,6 @@ function regenTimeline(tag) {
     if (tag) {
         setTag(tag);
         document.title = `#${tag}`;
-        document.getElementById("tag-header").innerText = `#${tag}`;
         const url = new URL(location.href);
         url.searchParams.set("tag", tag);
         history.pushState({}, "", url);
@@ -26,7 +25,7 @@ function regenTimeline(tag) {
     renderTimeline();
 }
 getInclude(new URL("/include/navbar.html", window.location.origin)).then((include) => {
-    document.body.prepend(include);
+    document.getElementsByTagName("header")[0].prepend(include);
 });
 renderTimeline();
 //# sourceMappingURL=tagpage.js.map

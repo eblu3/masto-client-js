@@ -3,12 +3,14 @@
 	<head>
 		<title>tag page</title>
 		<link rel="stylesheet" href="/css/timeline.css" />
+		<link rel="stylesheet" href="/css/tagpage.css" />
 		<script async src="/js/masto_ts.js" type="module"></script>
 		<script src="/js/tagpage.js" type="module"></script>
 	</head>
 	<body>
-		<h1 id="tag-header">#tag</h1>
-		<input id="tag-input" type="search" placeholder="tag" />
+		<header>
+			<h1>#<input id="tag-input" type="search" placeholder="tag" /></h1>
+		</header>
 		<main id="timeline"></main>
 		<button id="load-more-button">Load more</button>
 	</body>
