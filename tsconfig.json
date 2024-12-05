@@ -15,6 +15,7 @@
 		"js/homepage.ts",
 		"js/publictimelinepage.ts",
 		"js/tagpage.ts",
+		"js/accountpage.ts",
 		"js/statuspage.ts"
 	]
 }

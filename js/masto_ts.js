@@ -18,7 +18,6 @@ export var Timelines;
 const instanceUrl = env.instanceUrl;
 export var timeline;
 export var tag;
-console.log(env.token);
 let token = env.token;
 let lastStatusId = "";
 function getTimeline(url, endpoint, tag, startAtId) {
@@ -77,6 +76,32 @@ function getStatus(id) {
             }
             const status = new mastodon.Status(yield response.json());
             return status;
+        }
+        catch (error) {
+            console.error(error.message);
+            return null;
+        }
+    });
+}
+function getAccount(id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            let response;
+            if (token) {
+                response = yield fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl), {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+            }
+            else {
+                response = yield fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
+            }
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            const account = new mastodon.Account(yield response.json());
+            return account;
         }
         catch (error) {
             console.error(error.message);
@@ -288,6 +313,15 @@ export function renderStatusPage(id) {
     getStatus(id).then((status) => {
         document.body.appendChild(renderStatus(status));
     });
+}
+export function renderAccountPage(id, acct) {
+    if (id) {
+        getAccount(id).then((account) => {
+            console.log(account);
+        });
+    }
+    else if (acct) {
+    }
 }
 export function setTimeline(endpoint) {
     timeline = endpoint;

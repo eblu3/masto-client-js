@@ -11,7 +11,6 @@ const instanceUrl: URL = env.instanceUrl;
 export var timeline: Timelines;
 export var tag: string | null;
 
-console.log(env.token);
 let token = env.token;
 
 let lastStatusId: string = "";
@@ -79,6 +78,33 @@ async function getStatus(id: string): Promise<mastodon.Status> | null {
 		const status = new mastodon.Status(await response.json());
 
 		return status;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+async function getAccount(id: string): Promise<mastodon.Account> | null {
+	try {
+		let response;
+
+		if(token) {
+			response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
+		}
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const account = new mastodon.Account(await response.json());
+
+		return account;
 	} catch(error) {
 		console.error(error.message);
 		return null;
@@ -362,6 +388,16 @@ export function renderStatusPage(id: string) {
 	getStatus(id).then((status: mastodon.Status) => {
 		document.body.appendChild(renderStatus(status));
 	})
+}
+
+export function renderAccountPage(id?: string, acct?: string) {
+	if(id) {
+		getAccount(id).then((account: mastodon.Account) => {
+			console.log(account);
+		});
+	} else if(acct) {
+		// TODO: implement account lookup via handle
+	}
 }
 
 export function setTimeline(endpoint: Timelines) {
