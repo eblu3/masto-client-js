@@ -1,3 +1,8 @@
 #tag-input {
-	font-size: inherit;
+	background-color: transparent;
+	color: inherit;
+
+	border: 1px solid var(--accent-color);
+
+	font: inherit;
 }
