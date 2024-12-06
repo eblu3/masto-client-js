@@ -163,66 +163,62 @@ export function getAccountByHandle(acct) {
 }
 function renderAttachments(attachments) {
     let out = [];
-    console.log(attachments);
-    for (let attachment of attachments) {
-        console.log(attachment);
-        if (attachment.type === mastodon.AttachmentType.Image) {
-            const image = document.createElement("img");
-            image.setAttribute("src", attachment.url.toString());
-            if (attachment.description) {
-                image.setAttribute("alt", attachment.description);
-            }
-            out.push(image);
+    for (const attachment of attachments) {
+        switch (attachment.type) {
+            case mastodon.AttachmentType.Image:
+                const image = document.createElement("img");
+                image.setAttribute("src", attachment.url.toString());
+                if (attachment.description) {
+                    image.setAttribute("alt", attachment.description);
+                }
+                out.push(image);
+                break;
+            case mastodon.AttachmentType.GIFV:
+                const gifv = document.createElement("video");
+                const gifvSource = document.createElement("source");
+                gifv.setAttribute("autoplay", "true");
+                gifv.setAttribute("loop", "true");
+                gifvSource.setAttribute("src", attachment.url.toString());
+                if (attachment.description) {
+                    gifv.setAttribute("aria-label", attachment.description);
+                }
+                gifv.appendChild(gifvSource);
+                out.push(gifv);
+                break;
+            case mastodon.AttachmentType.Video:
+                const video = document.createElement("video");
+                const videoSource = document.createElement("source");
+                video.setAttribute("controls", "true");
+                videoSource.setAttribute("src", attachment.url.toString());
+                if (attachment.description) {
+                    video.setAttribute("aria-label", attachment.description);
+                }
+                video.appendChild(videoSource);
+                out.push(video);
+                break;
+            case mastodon.AttachmentType.Audio:
+                const audio = document.createElement("audio");
+                audio.setAttribute("controls", "true");
+                audio.setAttribute("src", attachment.url.toString());
+                if (attachment.description) {
+                    audio.setAttribute("aria-label", attachment.description);
+                }
+                out.push(audio);
+                break;
+            default:
+                const attachmentLink = document.createElement("a");
+                attachmentLink.setAttribute("href", attachment.url.toString());
+                attachmentLink.innerText = `[📎 ${attachment.description}]`;
+                out.push(attachmentLink);
+                break;
         }
-        else if (attachment.type === mastodon.AttachmentType.GIFV) {
-            const gifv = document.createElement("video");
-            const gifvSource = document.createElement("source");
-            gifv.setAttribute("autoplay", "true");
-            gifv.setAttribute("loop", "true");
-            gifvSource.setAttribute("src", attachment.url.toString());
-            if (attachment.description) {
-                gifv.setAttribute("aria-label", attachment.description);
-            }
-            gifv.appendChild(gifvSource);
-            out.push(gifv);
-        }
-        else if (attachment.type === mastodon.AttachmentType.Video) {
-            const video = document.createElement("video");
-            const videoSource = document.createElement("source");
-            video.setAttribute("controls", "true");
-            videoSource.setAttribute("src", attachment.url.toString());
-            if (attachment.description) {
-                video.setAttribute("aria-label", attachment.description);
-            }
-            video.appendChild(videoSource);
-            out.push(video);
-        }
-        else if (attachment.type === mastodon.AttachmentType.Audio) {
-            const audio = document.createElement("audio");
-            audio.setAttribute("controls", "true");
-            audio.setAttribute("src", attachment.url.toString());
-            if (attachment.description) {
-                audio.setAttribute("aria-label", attachment.description);
-            }
-            out.push(audio);
-        }
-        else {
-            const attachmentLink = document.createElement("a");
-            attachmentLink.setAttribute("href", attachment.url.toString());
-            attachmentLink.innerText = `[📎 ${attachment.description}]`;
-            out.push(attachmentLink);
-        }
-        return out;
     }
+    return out;
 }
 function renderEmojis(str, emojis) {
     let processedString = str;
     for (const emoji of emojis) {
-        console.log(`replacing emoji ${emoji.shortcode}...`);
         processedString = processedString.replaceAll(`:${emoji.shortcode}:`, `<img class=\"custom-emoji\" src=\"${emoji.url.toString()}\" alt=\"${emoji.shortcode}\" />`);
-    }
-    if (emojis.length > 0) {
-        console.log(processedString);
     }
     return processedString;
 }
@@ -317,7 +313,6 @@ function renderStatus(status, label) {
         out.appendChild(label);
     }
     out.appendChild(renderStatusAccountInfo(status.account));
-    console.log(status.card);
     if (status.sensitive || status.spoilerText != "") {
         const details = document.createElement("details");
         const summary = document.createElement("summary");
