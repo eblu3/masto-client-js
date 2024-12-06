@@ -165,6 +165,42 @@ export async function getAccountByHandle(acct: string) {
 	}
 }
 
+export async function postStatus(
+	status?: string,
+	mediaIds?: string[],
+	pollOptions?: string[],
+	pollExpiresIn?: number,
+	pollMultipleChoice?: boolean,
+	pollHideTotals?: boolean,
+	inReplyToId?: string,
+	isSensitive?: boolean,
+	spoilerText?: string,
+	visibility?: string,
+	language?: string,
+	scheduledAt?: string
+): Promise<mastodon.Status> | null {
+	try {
+		let params = new URLSearchParams([["status", status]]);
+		let response = await fetch(new URL(`/api/v1/statuses?${params.toString()}`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const postedStatus = new mastodon.Status(await response.json());
+
+		return postedStatus;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
 function renderAttachments(attachments: mastodon.MediaAttachment[]): HTMLElement[] {
 	let out: HTMLElement[] = [];
 
@@ -348,7 +384,7 @@ function renderProfileInfo(account: mastodon.Account): HTMLElement {
 	return out;
 }
 
-function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement {
+export function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement {
 	if(status.reblog) {
 		let label = document.createElement("p");
 
@@ -434,7 +470,7 @@ function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement
 
 	statusTime.setAttribute("datetime", status.createdAt.toISOString());
 
-	console.log(timeSincePost <= -604800);
+	console.log(timeSincePost);
 	
 	switch(true) {
 		case timeSincePost <= -604800:
@@ -451,6 +487,9 @@ function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement
 			break;
 		case timeSincePost <= -1:
 			statusTime.innerText = rtf.format(Math.floor(timeSincePost), "seconds") + ` (${status.createdAt.toLocaleString()})`;
+			break;
+		case timeSincePost > -1:
+			statusTime.innerText = `now (${status.createdAt.toLocaleString()})`;
 			break;
 		default:
 			statusTime.innerText = status.createdAt.toLocaleString();

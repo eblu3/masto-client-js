@@ -161,6 +161,28 @@ export function getAccountByHandle(acct) {
         }
     });
 }
+export function postStatus(status, mediaIds, pollOptions, pollExpiresIn, pollMultipleChoice, pollHideTotals, inReplyToId, isSensitive, spoilerText, visibility, language, scheduledAt) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            let params = new URLSearchParams([["status", status]]);
+            let response = yield fetch(new URL(`/api/v1/statuses?${params.toString()}`, instanceUrl), {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            const postedStatus = new mastodon.Status(yield response.json());
+            return postedStatus;
+        }
+        catch (error) {
+            console.error(error.message);
+            return null;
+        }
+    });
+}
 function renderAttachments(attachments) {
     let out = [];
     for (const attachment of attachments) {
@@ -298,7 +320,7 @@ function renderProfileInfo(account) {
     out.appendChild(avatar);
     return out;
 }
-function renderStatus(status, label) {
+export function renderStatus(status, label) {
     if (status.reblog) {
         let label = document.createElement("p");
         label.setAttribute("class", "label");
@@ -356,7 +378,7 @@ function renderStatus(status, label) {
     statusTimeContainer.setAttribute("class", "time-container");
     statusLink.setAttribute("href", `/status/?id=${status.id}`);
     statusTime.setAttribute("datetime", status.createdAt.toISOString());
-    console.log(timeSincePost <= -604800);
+    console.log(timeSincePost);
     switch (true) {
         case timeSincePost <= -604800:
             statusTime.innerText = status.createdAt.toLocaleString();
@@ -372,6 +394,9 @@ function renderStatus(status, label) {
             break;
         case timeSincePost <= -1:
             statusTime.innerText = rtf.format(Math.floor(timeSincePost), "seconds") + ` (${status.createdAt.toLocaleString()})`;
+            break;
+        case timeSincePost > -1:
+            statusTime.innerText = `now (${status.createdAt.toLocaleString()})`;
             break;
         default:
             statusTime.innerText = status.createdAt.toLocaleString();
