@@ -65,6 +65,8 @@ body > article, #timeline > article, #post-input-container {
 
 article > img, article > video, article > details > img, article > details > video {
 	max-width: calc(100% + 2em);
+
+	margin-left: -1em;
 }
 
 article > address {

@@ -1,22 +1,24 @@
 import { getInclude } from "./modules/includes.mjs";
 
-function resizeAllImagesToFit() {
-	for(const status of Object.values(document.getElementsByTagName("article"))) {
-		for(const image of Object.values(status.getElementsByTagName("img"))) {
-			if(image.parentElement.nodeName != "ADDRESS" && !image.parentElement.classList.contains("embed-card")) {
-				if((image as HTMLImageElement).naturalWidth >= status.clientWidth) {
-					image.style.marginLeft = "-1em";
-				} else {
-					image.style.marginLeft = "auto";
-					image.style.marginRight = "auto";
-				}
-			}
-		}
-	}
-}
+// this isn't working and has a lot of edge cases so I'll revisit it later
+//
+// function resizeAllImagesToFit() {
+// 	for(const status of Object.values(document.getElementsByTagName("article"))) {
+// 		for(const image of Object.values(status.getElementsByTagName("img"))) {
+// 			if(image.parentElement.nodeName != "ADDRESS" && !image.parentElement.classList.contains("embed-card")) {
+// 				if((image as HTMLImageElement).naturalWidth >= status.clientWidth) {
+// 					image.style.marginLeft = "-1em";
+// 				} else {
+// 					image.style.marginLeft = "auto";
+// 					image.style.marginRight = "auto";
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 addEventListener("resize", (event) => {
-	resizeAllImagesToFit();
+	// resizeAllImagesToFit();
 });
 
 getInclude(new URL("/include/navbar.html", window.location.origin)).then((include: DocumentFragment) => {
@@ -25,5 +27,5 @@ getInclude(new URL("/include/navbar.html", window.location.origin)).then((includ
 
 // this will execute after everything else loads
 setTimeout(function() {
-	resizeAllImagesToFit();
-}, 0);
+	// resizeAllImagesToFit();
+}, 200);
