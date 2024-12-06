@@ -14,8 +14,12 @@
 		</header>
 		<main id="timeline">
 			<div id="post-input-container">
-				<textarea id="post-input" placeholder="What's up?"></textarea>
-				<button id="post-button">Post!</button>
+				<form action="" onsubmit="return false;">
+					<textarea id="post-input" placeholder="What's up?"></textarea>
+					<label for="cw">Content warning</label>
+					<input type="checkbox" id="cw-toggle" name="cw" />
+					<button id="post-button">Post!</button>
+				</form>
 			</div>
 		</main>
 		<button id="load-more-button">Load more</button>
