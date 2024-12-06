@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"lib": ["ESNext", "DOM"],
-		"module": "ES2020",
+		"module": "ESNext",
 		"target": "ES2016",
 		"noImplicitAny": true,
 		"removeComments": true,
@@ -9,6 +9,7 @@
 		"sourceMap": true
 	},
 	"files": [
+		"js/modules/custom_elements.mts",
 		"js/modules/mastodon.mts",
 		"js/modules/includes.mts",
 		"js/masto_ts.ts",
