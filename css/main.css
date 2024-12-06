@@ -58,15 +58,27 @@ body > article, #timeline > article, #post-input-container {
 	border-radius: var(--radius-large);
 	box-shadow: 0px 8px 8px rgba(0,0,0,0.5);
 
+	overflow-wrap: break-word;
+
 	transition: height 0.5s ease-out;
 }
 
 article > img, article > video, article > details > img, article > details > video {
-	max-width: 100%;
+	max-width: calc(100% + 2em);
 }
 
 article > address {
 	display: flex;
+
+	margin-bottom: 1em;
+}
+
+article > .label {
+	margin-top: 0;
+}
+
+article > .time-container {
+	margin-bottom: 0;
 }
 
 .avatar {

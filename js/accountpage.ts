@@ -1,5 +1,4 @@
 import { renderAccountPage, renderAccountTimeline, getAccountByHandle, getAccountIdFromHandle } from "./masto_ts.js";
-import { getInclude } from "./modules/includes.mjs";
 
 let accountId: string | null = new URLSearchParams(document.location.search).get("id");
 const accountHandle: string | null = new URLSearchParams(document.location.search).get("acct");
@@ -17,10 +16,6 @@ if(accountId != null) {
 
 document.getElementById("load-more-button").addEventListener("click", () => {
 	renderAccountTimeline(accountId);
-});
-
-getInclude(new URL("/include/navbar.html", window.location.origin)).then((include: DocumentFragment) => {
-	document.getElementsByTagName("header")[0].prepend(include);
 });
 
 export {};

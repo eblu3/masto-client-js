@@ -12,6 +12,7 @@
 		"js/modules/mastodon.mts",
 		"js/modules/includes.mts",
 		"js/masto_ts.ts",
+		"js/common.ts",
 		"js/homepage.ts",
 		"js/publictimelinepage.ts",
 		"js/tagpage.ts",

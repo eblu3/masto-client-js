@@ -305,6 +305,7 @@ function renderProfileInfo(account) {
 function renderStatus(status, label) {
     if (status.reblog) {
         let label = document.createElement("p");
+        label.setAttribute("class", "label");
         label.innerHTML = `🔁 <span class=\"display-name\">${renderEmojis(status.account.displayName, status.account.emojis)}</span> boosted`;
         return renderStatus(status.reblog, label = label);
     }
@@ -353,6 +354,7 @@ function renderStatus(status, label) {
     const statusTimeContainer = document.createElement("p");
     const statusLink = document.createElement("a");
     const statusTime = document.createElement("time");
+    statusTimeContainer.setAttribute("class", "time-container");
     statusLink.setAttribute("href", `/status/?id=${status.id}`);
     statusTime.setAttribute("datetime", status.createdAt.toISOString());
     statusTime.innerText = status.createdAt.toLocaleString();

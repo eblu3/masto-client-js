@@ -1,0 +1,16 @@
+.profile-info {
+	max-width: 1024px;
+
+	margin: auto;
+	padding: 1em;
+
+	background-color: var(--surface-color);
+	background-size: cover;
+	background-position: center;
+
+	border-radius: var(--radius-large);
+}
+
+.profile-info .avatar {
+	max-width: 128px;
+}

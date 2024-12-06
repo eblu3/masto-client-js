@@ -1,5 +1,4 @@
 import { setTimeline, Timelines, renderTimeline } from "./masto_ts.js";
-import { getInclude } from "./modules/includes.mjs";
 
 const postInput: HTMLElement = document.getElementById("post-input");
 
@@ -15,10 +14,6 @@ postInput.addEventListener("input", (event) => {
 });
 
 setTimeline(Timelines.Home);
-
-getInclude(new URL("/include/navbar.html", window.location.origin)).then((include: DocumentFragment) => {
-	document.getElementsByTagName("header")[0].prepend(include);
-});
 
 renderTimeline();
 

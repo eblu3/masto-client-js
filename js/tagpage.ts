@@ -1,5 +1,4 @@
 import { setTimeline, Timelines, setTag, renderTimeline, resetLastStatus } from "./masto_ts.js";
-import { getInclude } from "./modules/includes.mjs";
 
 const tagToSearch = new URLSearchParams(document.location.search).get("tag");
 
@@ -36,10 +35,6 @@ function regenTimeline(tag?: string) {
 	document.getElementById("timeline").replaceChildren();
 	renderTimeline();
 }
-
-getInclude(new URL("/include/navbar.html", window.location.origin)).then((include: DocumentFragment) => {
-	document.getElementsByTagName("header")[0].prepend(include);
-});
 
 renderTimeline();
 
