@@ -1,2 +1,2 @@
-/.env.js
-/js/*.js
+.env.js
+js/*.js.map
