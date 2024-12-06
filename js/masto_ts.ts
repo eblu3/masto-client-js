@@ -395,7 +395,23 @@ export function renderStatus(status: mastodon.Status, label?: HTMLElement): HTML
 		return renderStatus(status.reblog, label=label);
 	}
 	
+	let nodeList = new DOMParser().parseFromString(status.content, "text/html").body.childNodes;
+	let parsedContent: HTMLElement[] = [];
 	let out = document.createElement("article");
+
+	nodeList.forEach((node) => {
+		if(node.nodeType == Node.ELEMENT_NODE) {
+			parsedContent.push((node as HTMLElement));
+		} else if(node.nodeType == Node.TEXT_NODE) {
+			const paragraphElement = document.createElement("p");
+			paragraphElement.innerText = node.nodeValue;
+			parsedContent.push(paragraphElement);
+		}
+	});
+
+	for(const element of parsedContent) {
+		element.innerHTML = renderEmojis(element.innerHTML, status.emojis);
+	}
 
 	if(status.language) {
 		out.setAttribute("lang", status.language.language);
@@ -423,7 +439,9 @@ export function renderStatus(status: mastodon.Status, label?: HTMLElement): HTML
 		// if(status.card != null) {
 		// 	details.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
 		// } else {
-			details.innerHTML += renderEmojis(status.content, status.emojis);
+			for(const element of parsedContent) {
+				details.appendChild(element);
+			}
 		// }
 
 		if(status.mediaAttachments.length > 0) {
@@ -441,7 +459,9 @@ export function renderStatus(status: mastodon.Status, label?: HTMLElement): HTML
 		// if(status.card != null) {
 		// 	out.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
 		// } else {
-			out.innerHTML += renderEmojis(status.content, status.emojis);
+			for(const element of parsedContent) {
+				out.appendChild(element);
+			}
 		// }
 
 		if(status.mediaAttachments.length > 0) {
@@ -470,8 +490,6 @@ export function renderStatus(status: mastodon.Status, label?: HTMLElement): HTML
 
 	statusTime.setAttribute("datetime", status.createdAt.toISOString());
 
-	console.log(timeSincePost);
-	
 	switch(true) {
 		case timeSincePost <= -604800:
 			statusTime.innerText = status.createdAt.toLocaleString();
