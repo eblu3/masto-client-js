@@ -1,2 +1,7 @@
 .env.js
-js/*.js.map
+
+# compiled typescript files
+js/**/*.js
+js/**/*.js.map
+js/**/*.mjs
+js/**/*.mjs.map
