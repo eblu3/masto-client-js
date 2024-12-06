@@ -423,12 +423,38 @@ function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement
 	const statusLink = document.createElement("a");
 	const statusTime = document.createElement("time");
 
+	const rtf = new Intl.RelativeTimeFormat(undefined, {
+		numeric: "auto"
+	});
+	const timeSincePost = (status.createdAt.getTime() - Date.now()) / 1000;
+
 	statusTimeContainer.setAttribute("class", "time-container");
 
 	statusLink.setAttribute("href", `/status/?id=${status.id}`);
 
 	statusTime.setAttribute("datetime", status.createdAt.toISOString());
-	statusTime.innerText = status.createdAt.toLocaleString();
+
+	console.log(timeSincePost <= -604800);
+	
+	switch(true) {
+		case timeSincePost <= -604800:
+			statusTime.innerText = status.createdAt.toLocaleString();
+			break;
+		case timeSincePost <= -86400:
+			statusTime.innerText = rtf.format(Math.floor(timeSincePost / 86400), "days") + ` (${status.createdAt.toLocaleString()})`;
+			break;
+		case timeSincePost <= -3600:
+			statusTime.innerText = rtf.format(Math.floor(timeSincePost / 3600), "hours") + ` (${status.createdAt.toLocaleString()})`;
+			break;
+		case timeSincePost <= -60:
+			statusTime.innerText = rtf.format(Math.floor(timeSincePost / 60), "minutes") + ` (${status.createdAt.toLocaleString()})`;
+			break;
+		case timeSincePost <= -1:
+			statusTime.innerText = rtf.format(Math.floor(timeSincePost), "seconds") + ` (${status.createdAt.toLocaleString()})`;
+			break;
+		default:
+			statusTime.innerText = status.createdAt.toLocaleString();
+	}
 
 	statusLink.appendChild(statusTime);
 	statusTimeContainer.appendChild(statusLink);
