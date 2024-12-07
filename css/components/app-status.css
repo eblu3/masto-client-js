@@ -10,3 +10,27 @@ article {
 
 	overflow-wrap: break-word;
 }
+
+address {
+	display: flex;
+}
+
+#account-info {
+	align-self: center;
+}
+
+#avatar {
+	max-width: var(--post-avatar-size);
+	max-height: var(--post-avatar-size);
+	aspect-ratio: 1;
+
+	margin-right: 0.5em;
+}
+
+#display-name {
+	font-size: 1.25em;
+}
+
+#post-content {
+	margin-left: calc(var(--post-avatar-size) + 0.5em);
+}

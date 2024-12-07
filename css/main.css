@@ -14,6 +14,8 @@
 	--radius-large: 1em;
 	--radius-small: 0.5em;
 	--avatar-radius: 100%;
+
+	--post-avatar-size: 4em;
 }
 
 body {

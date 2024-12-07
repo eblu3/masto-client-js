@@ -2,3 +2,11 @@
 	max-height: 1.25em;
 	vertical-align: bottom;
 }
+
+.avatar {
+	border-radius: var(--avatar-radius);
+}
+
+.display-name {
+	font-weight: bold;
+}

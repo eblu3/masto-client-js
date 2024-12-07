@@ -11,14 +11,16 @@
 		<h1>custom elements</h1>
 		<h2>app-profile-header</h2>
 		<h3>from ID</h3>
-		<input id="acctid-input">
+		<input id="acctid-input" placeholder="ID">
 		<app-profile-header id="header-acctid"></app-profile-header>
 		<h3>from handle</h3>
-		<input type="email" id="acct-input">
+		<input type="email" id="acct-input" placeholder="@account@site.com">
 		<app-profile-header id="header-acct"></app-profile-header>
 		<h2>app-status</h2>
-		<input id="status-input">
-		<app-status id="status"></app-status>
+		<input id="status-input" placeholder="ID">
+		<app-status id="status">
+			<app-status-header slot="header"></app-status-header>
+		</app-status>
 		<h3>app-status-header</h3>
 		<app-status-header></app-status-header>
 

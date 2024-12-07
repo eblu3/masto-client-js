@@ -5,7 +5,12 @@ let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
 let appStatusStylesheet: CSSStyleSheet;
 
+let statusHeaderTemplate: DocumentFragment;
+let statusTemplate: DocumentFragment;
+
 class ProfileHeader extends HTMLElement {
+	static observedAttributes = ["acctid", "acct"];
+	
 	constructor() {
 		super();
 	}
@@ -28,6 +33,7 @@ class ProfileHeader extends HTMLElement {
 		avatar.setAttribute("id", "avatar");
 
 		displayName.setAttribute("id", "display-name");
+		displayName.setAttribute("class", "display-name");
 
 		handle.setAttribute("id", "handle");
 
@@ -69,10 +75,6 @@ class ProfileHeader extends HTMLElement {
 			});
 		}
 	}
-
-	static get observedAttributes() {
-		return ["acctid", "acct"];
-	}
 }
 
 class StatusHeader extends HTMLElement {
@@ -81,51 +83,41 @@ class StatusHeader extends HTMLElement {
 	}
 
 	connectedCallback() {
-		console.log("test");
-	}
+		const shadow = this.attachShadow({mode: "open"});
 
-	AttributeChangedCallback(name: string, oldValue: string, newValue: string) {
-		const shadow = this.shadowRoot ?? this.attachShadow({mode: "open"});
-		const testElement = shadow.getElementById("test");
+		shadow.adoptedStyleSheets = [commonStylesheet, appStatusStylesheet];
 
-		if(testElement != null) {
-
-		} else {
-			testElement.innerText = "this is a test";
-			shadow.appendChild(testElement);
-		}
+		shadow.appendChild(statusHeaderTemplate.cloneNode(true));
 	}
 }
 
 class Status extends HTMLElement {
+	static observedAttributes = ["statusid"];
+
 	constructor() {
 		super();
 	}
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		const article = document.createElement("article");
-		const header = document.createElement("app-status-header");
-
-		article.setAttribute("id", "post-content");
 
 		shadow.adoptedStyleSheets = [commonStylesheet, appStatusStylesheet];
-		
-		shadow.appendChild(header);
-		shadow.appendChild(article);
+
+		shadow.appendChild(statusTemplate.cloneNode(true));
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		console.log(`${name} changed from ${oldValue} to ${newValue}`);
 		if(name == "statusid") {
 			getStatus(newValue).then((status) => {
-				this.shadowRoot.getElementById("post-content").innerHTML = status.content;
+				const headerRoot = this.getElementsByTagName("app-status-header")[0].shadowRoot;
+
+				headerRoot.getElementById("avatar").setAttribute("src", status.account.avatar.href);
+				headerRoot.getElementById("display-name").innerHTML = renderEmojis(status.account.displayName, status.account.emojis);
+				headerRoot.getElementById("acct").innerText = `@${status.account.acct}`;
+				this.shadowRoot.getElementById("post-content").innerHTML = renderEmojis(status.content, status.emojis);
 			});
 		}
-	}
-
-	static get observedAttributes() {
-		return ["statusid"];
 	}
 }
 
@@ -139,6 +131,18 @@ async function getStylesheet(url: string): Promise<CSSStyleSheet> {
 	return stylesheet;
 }
 
+async function getTemplate(url: string, templateId: string): Promise<DocumentFragment> {
+	const response = await fetch(url);
+	const template = (new DOMParser().parseFromString(await response.text(), "text/html").getElementById(templateId) as HTMLTemplateElement);
+
+	return template.content;
+}
+
+async function initTemplates() {
+	statusHeaderTemplate = await getTemplate("/templates/status.html", "header");
+	statusTemplate = await getTemplate("/templates/status.html", "status");
+}
+
 async function initStylesheets() {
 	commonStylesheet = await getStylesheet("/css/components/common.css");
 	profileHeaderStylesheet = await getStylesheet("/css/components/app-profile-header.css");
@@ -146,10 +150,12 @@ async function initStylesheets() {
 }
 
 function initComponents() {
-	initStylesheets().then(() => {
-		customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
-		customElements.define("app-status-header", StatusHeader, {extends: "header"});
-		customElements.define("app-status", Status, {extends: "article"});
+	initTemplates().then(() => {
+		initStylesheets().then(() => {
+			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
+			customElements.define("app-status-header", StatusHeader, {extends: "header"});
+			customElements.define("app-status", Status, {extends: "article"});
+		});
 	});
 }
 

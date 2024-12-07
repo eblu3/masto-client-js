@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+	<template id="status">
+		<article>
+			<slot name="header"></slot>
+			<div id="post-content"><p>This is a post.</p></div>
+			<div id="post-attachments"></div>
+			<p><time>post time</time></p>
+		</article>
+	</template>
+
+	<template id="header">
+		<header>
+			<address>
+				<img id="avatar" class="avatar" src="/img/default-avatar.png">
+				<div id="account-info">
+					<span id="display-name" class="display-name">User</span>
+					<br>
+					<span id="acct">@user@site.url</span>
+				</div>
+			</address>
+		</header>
+	</template>
+</html>
