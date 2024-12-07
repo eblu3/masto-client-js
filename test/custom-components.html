@@ -16,7 +16,8 @@
 		<input type="email" id="acct-input">
 		<app-profile-header id="header-acct"></app-profile-header>
 		<h2>app-status</h2>
-		<app-status statusid="113607809162940426"></app-status>
+		<input id="status-input">
+		<app-status id="status"></app-status>
 
 		<script>
 			document.getElementById("acctid-input").addEventListener("change", (event) => {
@@ -24,6 +25,9 @@
 			});
 			document.getElementById("acct-input").addEventListener("change", (event) => {
 				document.getElementById("header-acct").setAttribute("acct", event.target.value);
+			});
+			document.getElementById("status-input").addEventListener("change", (event) => {
+				document.getElementById("status").setAttribute("statusid", event.target.value);
 			});
 		</script>
 	</body>
