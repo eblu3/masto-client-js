@@ -1,8 +1,6 @@
 article {
 	padding: 1em;
 
-	max-width: 1024px;
-
 	background-color: var(--surface-color);
 
 	border-radius: var(--radius-large);

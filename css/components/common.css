@@ -1,3 +1,11 @@
+a {
+	color: var(--accent-color);
+}
+
+a:hover {
+	color: var(--accent-color-lighter);
+}
+
 .custom-emoji {
 	max-height: 1.25em;
 	vertical-align: bottom;

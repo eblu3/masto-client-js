@@ -7,7 +7,7 @@ export enum Timelines {
 	Home = "/api/v1/timelines/home"
 }
 
-const instanceUrl: URL = env.instanceUrl;
+export const instanceUrl: URL = env.instanceUrl;
 export var timeline: Timelines;
 export var tag: string | null;
 export var charLimit: number = env.charLimit;

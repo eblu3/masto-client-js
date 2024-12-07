@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
 	<template id="status">
-		<article>
+		<article id="status-root">
 			<slot name="header"></slot>
 			<div id="post-content"><p>This is a post.</p></div>
 			<div id="post-attachments"></div>
+			<slot name="card"></slot>
 			<p><time>post time</time></p>
+			<p><a id="post-url" href="#">View on instance</a></p>
 		</article>
 	</template>
 

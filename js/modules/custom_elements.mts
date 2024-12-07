@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {getStatus, getAccount, getAccountByHandle, renderEmojis} from "../masto_ts.js";
+import {instanceUrl, getStatus, getAccount, getAccountByHandle, renderEmojis} from "../masto_ts.js";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -7,6 +7,7 @@ let appStatusStylesheet: CSSStyleSheet;
 
 let statusHeaderTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
+let cardTemplate: DocumentFragment;
 
 class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
@@ -110,12 +111,20 @@ class Status extends HTMLElement {
 		console.log(`${name} changed from ${oldValue} to ${newValue}`);
 		if(name == "statusid") {
 			getStatus(newValue).then((status) => {
+				const shadowRoot = this.shadowRoot;
 				const headerRoot = this.getElementsByTagName("app-status-header")[0].shadowRoot;
 
 				headerRoot.getElementById("avatar").setAttribute("src", status.account.avatar.href);
 				headerRoot.getElementById("display-name").innerHTML = renderEmojis(status.account.displayName, status.account.emojis);
 				headerRoot.getElementById("acct").innerText = `@${status.account.acct}`;
-				this.shadowRoot.getElementById("post-content").innerHTML = renderEmojis(status.content, status.emojis);
+				
+				if(status.language) {
+					shadowRoot.getElementById("status-root").setAttribute("lang", status.language.language);
+				} else if(shadowRoot.getElementById("status-root").hasAttribute("lang")) {
+					shadowRoot.getElementById("status-root").removeAttribute("lang");
+				}
+				shadowRoot.getElementById("post-content").innerHTML = renderEmojis(status.content, status.emojis);
+				shadowRoot.getElementById("post-url").setAttribute("href", new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href);
 			});
 		}
 	}
@@ -141,6 +150,7 @@ async function getTemplate(url: string, templateId: string): Promise<DocumentFra
 async function initTemplates() {
 	statusHeaderTemplate = await getTemplate("/templates/status.html", "header");
 	statusTemplate = await getTemplate("/templates/status.html", "status");
+	cardTemplate = await getTemplate("/templates/card.html", "card");
 }
 
 async function initStylesheets() {
