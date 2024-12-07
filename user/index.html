@@ -5,6 +5,7 @@
 		<link rel="stylesheet" href="/css/main.css" />
 		<link rel="stylesheet" href="/css/accountpage.css" />
 		<script async src="/js/masto_ts.js" type="module"></script>
+		<script src="/js/modules/custom_elements.mjs" type="module"></script>
 		<script src="/js/common.js" type="module"></script>
 		<script src="/js/accountpage.js" type="module"></script>
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -13,6 +14,7 @@
 		<header>
 			<h1>User</h1>
 		</header>
+		<app-profile-header id="profile-header"></app-profile-header>
 		<main id="timeline"></main>
 		<button id="load-more-button">Load more</button>
 	</body>

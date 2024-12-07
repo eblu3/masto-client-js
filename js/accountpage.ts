@@ -4,10 +4,10 @@ let accountId: string | null = new URLSearchParams(document.location.search).get
 const accountHandle: string | null = new URLSearchParams(document.location.search).get("acct");
 
 if(accountId != null) {
-	renderAccountPage(accountId, undefined);
+	document.getElementById("profile-header").setAttribute("acctid", accountId);
 	renderAccountTimeline(accountId);
 } else if(accountHandle != null) {
-	renderAccountPage(undefined, accountHandle);
+	document.getElementById("profile-header").setAttribute("acct", accountHandle);
 	getAccountIdFromHandle(accountHandle).then((id: string) => {
 		accountId = id;
 		renderAccountTimeline(accountId);
