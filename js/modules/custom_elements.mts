@@ -10,7 +10,8 @@ class ProfileHeader extends HTMLElement {
 		super();
 	}
 
-	#buildElement(account: mastodon.Account, targetElement: HTMLElement) {
+	#buildElement(shadowRoot: ShadowRoot) {
+		const container = document.createElement("address");
 		const header = document.createElement("div");
 		const infoContainer = document.createElement("div");
 		const avatar = document.createElement("img");
@@ -18,79 +19,81 @@ class ProfileHeader extends HTMLElement {
 		const handle = document.createElement("p");
 		const bio = document.createElement("p");
 
+		container.setAttribute("id", "container");
+
 		header.setAttribute("id", "header");
 
 		infoContainer.setAttribute("id", "info-container");
 
 		avatar.setAttribute("id", "avatar");
-		avatar.setAttribute("src", account.avatar.href);
 
 		displayName.setAttribute("id", "display-name");
-		displayName.innerHTML = renderEmojis(account.displayName, account.emojis);
 
 		handle.setAttribute("id", "handle");
-		handle.innerText = `@${account.acct}`;
 
 		bio.setAttribute("id", "bio");
-		bio.innerHTML = renderEmojis(account.note, account.emojis);
 
 		infoContainer.appendChild(avatar);
 		infoContainer.appendChild(displayName);
 		infoContainer.appendChild(handle);
 		infoContainer.appendChild(bio);
 				
-		targetElement.style.setProperty("--header-url", `url(${account.header.href})`);
-		targetElement.appendChild(header);
-		targetElement.appendChild(infoContainer);
+		container.appendChild(header);
+		container.appendChild(infoContainer);
+		shadowRoot.appendChild(container);
 	}
 
-	#regenElement(account: mastodon.Account, shadowRoot: ShadowRoot, targetElement: HTMLElement) {
+	#genElement(account: mastodon.Account, shadowRoot: ShadowRoot) {
+		shadowRoot.getElementById("container").style.setProperty("--header-url", `url(${account.header.href})`);
 		shadowRoot.getElementById("avatar").setAttribute("src", account.avatar.href);
 		shadowRoot.getElementById("display-name").innerHTML = renderEmojis(account.displayName, account.emojis);
 		shadowRoot.getElementById("handle").innerText = `@${account.acct}`;
 		shadowRoot.getElementById("bio").innerHTML = renderEmojis(account.note, account.emojis);
-		
-		targetElement.style.setProperty("--header-url", `url(${account.header.href})`);
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, profileHeaderStylesheet];
+
+		this.#buildElement(shadow);
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-		const shadow = this.shadowRoot ?? this.attachShadow({mode: "open"});
-		let container = shadow.getElementById("container");
-
-		if(shadow.adoptedStyleSheets.length <= 0) {
-			shadow.adoptedStyleSheets = [commonStylesheet, profileHeaderStylesheet];
-		}
-
-		if(container != null) {
-			if(name == "acctid") {
-				getAccount(newValue).then((account) => {
-					this.#regenElement(account, shadow, container);
-				});
-			} else if(name == "acct") {
-				getAccountByHandle(newValue).then((account) => {
-					this.#regenElement(account, shadow, container);
-				});
-			}
-		} else {
-			container = document.createElement("address");
-			container.setAttribute("id", "container");
-
-			if(name == "acctid") {
-				getAccount(newValue).then((account) => {
-					this.#buildElement(account, container);
-				});
-			} else if(name == "acct") {
-				getAccountByHandle(newValue).then((account) => {
-					this.#buildElement(account, container);
-				});
-			}
-
-			shadow.appendChild(container);
+		if(name == "acctid") {
+			getAccount(newValue).then((account) => {
+				this.#genElement(account, this.shadowRoot);
+			});
+		} else if(name == "acct") {
+			getAccountByHandle(newValue).then((account) => {
+				this.#genElement(account, this.shadowRoot);
+			});
 		}
 	}
 
 	static get observedAttributes() {
 		return ["acctid", "acct"];
+	}
+}
+
+class StatusHeader extends HTMLElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		console.log("test");
+	}
+
+	AttributeChangedCallback(name: string, oldValue: string, newValue: string) {
+		const shadow = this.shadowRoot ?? this.attachShadow({mode: "open"});
+		const testElement = shadow.getElementById("test");
+
+		if(testElement != null) {
+
+		} else {
+			testElement.innerText = "this is a test";
+			shadow.appendChild(testElement);
+		}
 	}
 }
 
@@ -102,14 +105,27 @@ class Status extends HTMLElement {
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		const article = document.createElement("article");
+		const header = document.createElement("app-status-header");
+
+		article.setAttribute("id", "post-content");
 
 		shadow.adoptedStyleSheets = [commonStylesheet, appStatusStylesheet];
 		
-		getStatus(this.getAttribute("statusid")).then((status) => {
-			article.innerHTML += status.content;
-		});
-
+		shadow.appendChild(header);
 		shadow.appendChild(article);
+	}
+
+	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+		console.log(`${name} changed from ${oldValue} to ${newValue}`);
+		if(name == "statusid") {
+			getStatus(newValue).then((status) => {
+				this.shadowRoot.getElementById("post-content").innerHTML = status.content;
+			});
+		}
+	}
+
+	static get observedAttributes() {
+		return ["statusid"];
 	}
 }
 
@@ -132,6 +148,7 @@ async function initStylesheets() {
 function initComponents() {
 	initStylesheets().then(() => {
 		customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
+		customElements.define("app-status-header", StatusHeader, {extends: "header"});
 		customElements.define("app-status", Status, {extends: "article"});
 	});
 }

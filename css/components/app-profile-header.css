@@ -37,14 +37,6 @@ address {
 	align-self: center;
 }
 
-#info-container > h1 {
-	margin-left: 0.5em;
-}
-
-#info-container > :not(.avatar, h1) {
-	margin-left: 1em;
-}
-
 #avatar {
 	max-height: 8em;
 
