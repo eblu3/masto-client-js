@@ -3,7 +3,8 @@ import {instanceUrl, getStatus, getAccount, getAccountByHandle, renderEmojis} fr
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
-let appStatusStylesheet: CSSStyleSheet;
+let statusStylesheet: CSSStyleSheet;
+let cardStylesheet: CSSStyleSheet;
 
 let statusHeaderTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
@@ -25,20 +26,20 @@ class ProfileHeader extends HTMLElement {
 		const handle = document.createElement("p");
 		const bio = document.createElement("p");
 
-		container.setAttribute("id", "container");
+		container.id = "container";
 
-		header.setAttribute("id", "header");
+		header.id = "header";
 
-		infoContainer.setAttribute("id", "info-container");
+		infoContainer.id = "info-container";
 
-		avatar.setAttribute("id", "avatar");
+		avatar.id = "avatar";
 
-		displayName.setAttribute("id", "display-name");
-		displayName.setAttribute("class", "display-name");
+		displayName.id = "display-name";
+		displayName.className = "display-name";
 
-		handle.setAttribute("id", "handle");
+		handle.id = "handle";
 
-		bio.setAttribute("id", "bio");
+		bio.id = "bio";
 
 		infoContainer.appendChild(avatar);
 		infoContainer.appendChild(displayName);
@@ -86,7 +87,7 @@ class StatusHeader extends HTMLElement {
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 
-		shadow.adoptedStyleSheets = [commonStylesheet, appStatusStylesheet];
+		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 
 		shadow.appendChild(statusHeaderTemplate.cloneNode(true));
 	}
@@ -102,7 +103,7 @@ class Status extends HTMLElement {
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 
-		shadow.adoptedStyleSheets = [commonStylesheet, appStatusStylesheet];
+		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 
 		shadow.appendChild(statusTemplate.cloneNode(true));
 	}
@@ -113,7 +114,6 @@ class Status extends HTMLElement {
 			getStatus(newValue).then((status) => {
 				const shadowRoot = this.shadowRoot;
 				const headerRoot = this.getElementsByTagName("app-status-header")[0].shadowRoot;
-
 				headerRoot.getElementById("avatar").setAttribute("src", status.account.avatar.href);
 				headerRoot.getElementById("display-name").innerHTML = renderEmojis(status.account.displayName, status.account.emojis);
 				headerRoot.getElementById("acct").innerText = `@${status.account.acct}`;
@@ -125,8 +125,44 @@ class Status extends HTMLElement {
 				}
 				shadowRoot.getElementById("post-content").innerHTML = renderEmojis(status.content, status.emojis);
 				shadowRoot.getElementById("post-url").setAttribute("href", new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href);
+
+				if(status.card != null) {
+					(this.getElementsByTagName("app-card")[0] as HTMLElement).hidden = false;
+					const cardRoot: ShadowRoot = this.getElementsByTagName("app-card")[0].shadowRoot;
+
+					if(status.card.image != null) {
+						const imageElement = (cardRoot.getElementById("image") as HTMLImageElement);
+						imageElement.src = status.card.image.href;
+						imageElement.hidden = false;
+
+						cardRoot.getElementById("card-root").style.maxWidth = `${status.card.width}px`;
+					} else {
+						(cardRoot.getElementById("image") as HTMLImageElement).hidden = true;
+						cardRoot.getElementById("card-root").style.maxWidth = null;
+					}
+					
+					(cardRoot.getElementById("link") as HTMLAnchorElement).href = status.card.url.href;
+					cardRoot.getElementById("title").innerText = status.card.title;
+					cardRoot.getElementById("description").innerHTML = status.card.description;
+				} else {
+					(this.getElementsByTagName("app-card")[0] as HTMLElement).hidden = true;
+				}
 			});
 		}
+	}
+}
+
+class Card extends HTMLAnchorElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+
+		shadow.adoptedStyleSheets = [commonStylesheet, cardStylesheet];
+
+		shadow.appendChild(cardTemplate.cloneNode(true));
 	}
 }
 
@@ -155,8 +191,9 @@ async function initTemplates() {
 
 async function initStylesheets() {
 	commonStylesheet = await getStylesheet("/css/components/common.css");
-	profileHeaderStylesheet = await getStylesheet("/css/components/app-profile-header.css");
-	appStatusStylesheet = await getStylesheet("/css/components/app-status.css");
+	profileHeaderStylesheet = await getStylesheet("/css/components/profile-header.css");
+	statusStylesheet = await getStylesheet("/css/components/status.css");
+	cardStylesheet = await getStylesheet("/css/components/card.css");
 }
 
 function initComponents() {
@@ -165,6 +202,7 @@ function initComponents() {
 			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
 			customElements.define("app-status-header", StatusHeader, {extends: "header"});
 			customElements.define("app-status", Status, {extends: "article"});
+			customElements.define("app-card", Card, {extends: "a"});
 		});
 	});
 }
