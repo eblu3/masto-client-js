@@ -10,6 +10,7 @@ export enum Timelines {
 const instanceUrl: URL = env.instanceUrl;
 export var timeline: Timelines;
 export var tag: string | null;
+export var charLimit: number = env.charLimit;
 
 let token = env.token;
 
@@ -268,7 +269,7 @@ function renderAttachments(attachments: mastodon.MediaAttachment[]): HTMLElement
 	return out;
 }
 
-function renderEmojis(str: string, emojis: mastodon.CustomEmoji[]) {
+export function renderEmojis(str: string, emojis: mastodon.CustomEmoji[]) {
 	let processedString = str;
 
 	for(const emoji of emojis) {

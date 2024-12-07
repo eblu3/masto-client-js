@@ -13,6 +13,7 @@
 
 	--radius-large: 1em;
 	--radius-small: 0.5em;
+	--avatar-radius: 100%;
 }
 
 body {
@@ -30,6 +31,12 @@ a {
 
 a:hover {
 	color: var(--accent-color-lighter);
+}
+
+button {
+	padding: 0.5em;
+	
+	border-radius: var(--radius-small);
 }
 
 body > header {
@@ -63,6 +70,20 @@ body > article, #timeline > article, #post-input-container {
 	transition: height 0.5s ease-out;
 }
 
+body > article:focus,
+body > article:focus-within,
+#timeline > article:focus,
+#timeline > article:focus-within,
+#post-input-container:focus,
+#post-input-container:focus-within {
+	background-color: var(--surface-color-lighter);
+	
+	box-shadow: 0px 16px 16px rgba(0,0,0,0.75),
+				inset 0px 0px 0px 2px var(--accent-color);
+	
+	transition: box-shadow ease-out 0.125s, background-color ease-out 0.125s;
+}
+
 article > img, article > video, article > details > img, article > details > video {
 	max-width: calc(100% + 2em);
 
@@ -84,7 +105,7 @@ article > .time-container {
 }
 
 .avatar {
-	border-radius: 100%;
+	border-radius: var(--avatar-radius);
 }
 
 address .avatar {
@@ -123,9 +144,11 @@ address .display-name {
 	font-weight: bold;
 
 	cursor: pointer;
+
+	transition: background-image ease-out 0.25s, border 0.25s ease-out;
 }
 
-.content-warning:hover {
+.content-warning:hover, .content-warning:focus {
 	background-color: var(--accent-color-bg-lighter);
 	background-image: radial-gradient(ellipse at bottom, var(--accent-color-bg-lightest), var(--accent-color-bg));
 	color: var(--accent-color-lighter);

@@ -9,8 +9,22 @@
 	<body>
 		<h1>custom elements</h1>
 		<h2>app-profile-header</h2>
-		<app-profile-header></app-profile-header>
+		<h3>from ID</h3>
+		<input id="acctid-input">
+		<app-profile-header id="header-acctid"></app-profile-header>
+		<h3>from handle</h3>
+		<input type="email" id="acct-input">
+		<app-profile-header id="header-acct"></app-profile-header>
 		<h2>app-status</h2>
 		<app-status statusid="113607809162940426"></app-status>
+
+		<script>
+			document.getElementById("acctid-input").addEventListener("change", (event) => {
+				document.getElementById("header-acctid").setAttribute("acctid", event.target.value);
+			});
+			document.getElementById("acct-input").addEventListener("change", (event) => {
+				document.getElementById("header-acct").setAttribute("acct", event.target.value);
+			});
+		</script>
 	</body>
 </html>
