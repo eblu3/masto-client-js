@@ -1,5 +1,4 @@
 address {
-	/* temporary. to test things */
 	width: calc(100% - 2em);
 
 	padding: 1em;
@@ -20,6 +19,7 @@ address {
 
 	background-size: cover;
 	background-position: center;
+	background-color: var(--background-color);
 	background-image: var(--header-url);
 
 	flex-basis: 75%;
@@ -27,7 +27,7 @@ address {
 }
 
 #info-container {
-	margin-top: -4em;
+	margin-top: max(calc((20vw / 2) * -1), -4em);
 	
 	width: 100%;
 	max-width: 1024px;
@@ -38,9 +38,16 @@ address {
 }
 
 #avatar {
+	width: 20vw;
+	max-width: 8em;
 	max-height: 8em;
+	aspect-ratio: 1;
 
 	border: 0.5em solid var(--surface-color);
 	/* temp */
 	border-radius: var(--avatar-radius);
+}
+
+#display-name {
+	margin-top: 0;
 }
