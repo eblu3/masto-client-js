@@ -4,6 +4,7 @@
 		<title>status</title>
 		<link rel="stylesheet" href="/css/main.css" />
 		<script async src="/js/masto_ts.js" type="module"></script>
+		<script src="/js/modules/custom_elements.mjs" type="module"></script>
 		<script src="/js/common.js" type="module"></script>
 		<script src="/js/statuspage.js" type="module"></script>
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -12,5 +13,9 @@
 		<header>
 			<h1>Post</h1>
 		</header>
+		<app-status id="status">
+			<app-status-header slot="header"></app-status-header>
+			<app-card slot="card" hidden></app-card>
+		</app-status>
 	</body>
 </html>

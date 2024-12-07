@@ -586,6 +586,28 @@ export async function getAccountIdFromHandle(acct: string): Promise<string> {
 	return account.id;
 }
 
+export function getRelativeTimeString(date: Date): string {
+	const rtf = new Intl.RelativeTimeFormat(undefined, {numeric: "auto"});
+	const timeElapsed = (date.getTime() - Date.now()) / 1000;
+
+	switch(true) {
+		case timeElapsed <= -604800:
+			return date.toLocaleString();
+		case timeElapsed <= -86400:
+			return rtf.format(Math.floor(timeElapsed / 86400), "days") + ` (${date.toLocaleString()})`;
+		case timeElapsed <= -3600:
+			return rtf.format(Math.floor(timeElapsed / 3600), "hours") + ` (${date.toLocaleString()})`;
+		case timeElapsed <= -60:
+			return rtf.format(Math.floor(timeElapsed / 60), "minutes") + ` (${date.toLocaleString()})`;
+		case timeElapsed <= -1:
+			return rtf.format(Math.floor(timeElapsed), "seconds") + ` (${date.toLocaleString()})`;
+		case timeElapsed > -1:
+			return `now (${date.toLocaleString()})`;
+		default:
+			return date.toLocaleString();
+	}
+}
+
 // window.onscroll = function(ev) {
 // 	if((window.innerHeight + Math.round(window.scrollY)) >= document.body.offsetHeight) {
 // 		renderTimeline();

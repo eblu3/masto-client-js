@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getAccount, getAccountByHandle, renderEmojis} from "../masto_ts.js";
+import {instanceUrl, getStatus, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis} from "../masto_ts.js";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -123,8 +123,12 @@ class Status extends HTMLElement {
 				} else if(shadowRoot.getElementById("status-root").hasAttribute("lang")) {
 					shadowRoot.getElementById("status-root").removeAttribute("lang");
 				}
+
 				shadowRoot.getElementById("post-content").innerHTML = renderEmojis(status.content, status.emojis);
 				shadowRoot.getElementById("post-url").setAttribute("href", new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href);
+				(shadowRoot.getElementById("link") as HTMLAnchorElement).href = `/status/?id=${status.id}`;
+				(shadowRoot.getElementById("time") as HTMLTimeElement).dateTime = status.createdAt.toISOString();
+				shadowRoot.getElementById("time").innerText = getRelativeTimeString(status.createdAt);
 
 				if(status.card != null) {
 					(this.getElementsByTagName("app-card")[0] as HTMLElement).hidden = false;
