@@ -23,12 +23,15 @@
 		<script>
 			document.getElementById("acctid-input").addEventListener("change", (event) => {
 				document.getElementById("header-acctid").setAttribute("acctid", event.target.value);
+				event.target.value = "";
 			});
 			document.getElementById("acct-input").addEventListener("change", (event) => {
 				document.getElementById("header-acct").setAttribute("acct", event.target.value);
+				event.target.value = "";
 			});
 			document.getElementById("status-input").addEventListener("change", (event) => {
 				document.getElementById("status").setAttribute("statusid", event.target.value);
+				event.target.value = "";
 			});
 		</script>
 	</body>
