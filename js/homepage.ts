@@ -5,7 +5,7 @@ const postButton: HTMLButtonElement = (document.getElementById("post-button") as
 const characterCounter: HTMLParagraphElement = (document.getElementById("character-counter") as HTMLParagraphElement);
 
 document.getElementById("load-more-button").addEventListener("click", () => {
-	renderTimeline();
+	renderTimeline(Timelines.Home);
 });
 
 postInput.style.height = `${postInput.scrollHeight}px`;
@@ -37,6 +37,8 @@ setTimeline(Timelines.Home);
 
 characterCounter.innerText = `${postInput.value.length}/${charLimit}`;
 
-renderTimeline();
+// customElements.whenDefined("app-status").then(() => {
+// 	renderTimeline();
+// });
 
 export {};

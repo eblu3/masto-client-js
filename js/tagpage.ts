@@ -6,36 +6,34 @@ document.title = `#${tagToSearch}`;
 
 (document.getElementById("tag-input") as HTMLInputElement).value = `${tagToSearch}`; 
 
-document.getElementById("tag-input").addEventListener("change", (event) => {
-	regenTimeline((event.target as HTMLInputElement).value);
-});
+// document.getElementById("tag-input").addEventListener("change", (event) => {
+// 	regenTimeline((event.target as HTMLInputElement).value);
+// });
 
-document.getElementById("load-more-button").addEventListener("click", () => {
-	renderTimeline();
-});
+// document.getElementById("load-more-button").addEventListener("click", () => {
+// 	renderTimeline(Timelines.Hashtag, tagToSearch);
+// });
 
-setTimeline(Timelines.Hashtag);
-setTag(tagToSearch);
+// setTimeline(Timelines.Hashtag);
+document.getElementById("timeline-component").setAttribute("tag", tagToSearch);
 
-function regenTimeline(tag?: string) {
-	console.log(tag);
+// function regenTimeline(tag?: string) {
+// 	console.log(tag);
 	
-	if(tag) {
-		setTag(tag);
-		document.title = `#${tag}`;
+// 	if(tag) {
+// 		setTag(tag);
+// 		document.title = `#${tag}`;
 
-		const url = new URL(location.href);
-		url.searchParams.set("tag", tag);
+// 		const url = new URL(location.href);
+// 		url.searchParams.set("tag", tag);
 		
-		history.pushState({}, "", url);
-	}
+// 		history.pushState({}, "", url);
+// 	}
 
-	resetLastStatus();
+// 	resetLastStatus();
 
-	document.getElementById("timeline").replaceChildren();
-	renderTimeline();
-}
-
-renderTimeline();
+// 	document.getElementById("timeline").replaceChildren();
+// 	renderTimeline();
+// }
 
 export {};

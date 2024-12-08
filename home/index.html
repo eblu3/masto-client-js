@@ -4,7 +4,8 @@
 		<title>home</title>
 		<link rel="stylesheet" href="/css/main.css" />
 		<link rel="stylesheet" href="/css/homepage.css" />
-		<script async src="/js/masto_ts.js" type="module"></script>
+		<script src="/js/modules/custom_elements.mjs" type="module"></script>
+		<script src="/js/masto_ts.js" type="module"></script>
 		<script src="/js/common.js" type="module"></script>
 		<script src="/js/homepage.js" type="module"></script>
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -13,7 +14,7 @@
 		<header>
 			<h1>Home</h1>
 		</header>
-		<main id="timeline">
+		<main>
 			<div id="post-input-container">
 				<form action="" onsubmit="return false;">
 					<textarea id="post-input" placeholder="What's up?"></textarea>
@@ -23,6 +24,9 @@
 					<p id="character-counter">0/0</p>
 				</form>
 			</div>
+			<app-timeline type="Home">
+				<div id="timeline" slot="statuses"></div>
+			</app-timeline>
 		</main>
 		<button id="load-more-button">Load more</button>
 	</body>

@@ -1,26 +1,30 @@
-<!DOCTYPE html>
-<html>
-	<template id="status">
-		<article id="status-root">
-			<slot name="header"></slot>
+<template id="status">
+	<article id="status-root">
+		<slot name="header"></slot>
+		<main>
 			<div id="post-content"><p>This is a post.</p></div>
-			<div id="post-attachments"></div>
 			<slot name="card"></slot>
-			<p><a id="link" href="#"><time id="time">post time</time></a></p>
-			<p><a id="post-url" href="#">View on instance</a></p>
-		</article>
-	</template>
+		</main>
+		<div id="post-attachments"></div>
+		<p><a id="link" href="#"><time id="time">post time</time></a></p>
+		<p><a id="post-url" href="#">View on instance</a></p>
+	</article>
+</template>
 
-	<template id="header">
-		<header>
-			<address>
-				<img id="avatar" class="avatar" src="/img/default-avatar.png">
-				<div id="account-info">
-					<span id="display-name" class="display-name">User</span>
-					<br>
-					<span id="acct">@user@site.url</span>
-				</div>
-			</address>
-		</header>
-	</template>
-</html>
+<template id="header">
+	<header>
+		<p id="label"></p>
+		<address>
+			<img id="avatar" class="avatar" src="/img/default-avatar.png">
+			<div id="account-info">
+				<a id="profile-link" href="#"><span id="display-name" class="display-name">User</span></a>
+				<br>
+				<span id="acct">@user@site.url</span>
+			</div>
+		</address>
+	</header>
+</template>
+
+<template id="content">
+
+</template>

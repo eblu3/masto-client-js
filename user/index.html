@@ -15,7 +15,11 @@
 			<h1>User</h1>
 		</header>
 		<app-profile-header id="profile-header"></app-profile-header>
-		<main id="timeline"></main>
+		<main>
+			<app-timeline id="timeline-component" type="Account">
+				<div id="timeline" slot="statuses"></div>
+			</app-timeline>
+		</main>
 		<button id="load-more-button">Load more</button>
 	</body>
 </html>

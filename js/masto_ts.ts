@@ -1,10 +1,11 @@
 import * as env from "../.env.js"; // look, I'm not here to fiddle with node all night. you can probably figure this one out yourself.
 import * as mastodon from "./modules/mastodon.mjs";
+import * as customElements from "./modules/custom_elements.mjs";
 
 export enum Timelines {
 	Public = "/api/v1/timelines/public",
 	Hashtag = "/api/v1/timelines/tag/",
-	Home = "/api/v1/timelines/home"
+	Home = "/api/v1/timelines/home",
 }
 
 export const instanceUrl: URL = env.instanceUrl;
@@ -23,7 +24,7 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 		newEndpoint = newEndpoint + tag;
 	}
 	
-	console.log(`Fetching timeline ${newEndpoint} from instance ${url}...`);
+	console.log(`Fetching timeline ${newEndpoint} from instance ${url.href}...`);
 
 	try {
 		let response;
@@ -105,7 +106,11 @@ export async function getStatus(id: string): Promise<mastodon.Status> | null {
 
 		const status = new mastodon.Status(await response.json());
 
-		return status;
+		if(status.reblog) {
+			return status.reblog
+		} else {
+			return status;
+		}
 	} catch(error) {
 		console.error(error.message);
 		return null;
@@ -202,7 +207,7 @@ export async function postStatus(
 	}
 }
 
-function renderAttachments(attachments: mastodon.MediaAttachment[]): HTMLElement[] {
+export function renderAttachments(attachments: mastodon.MediaAttachment[]): HTMLElement[] {
 	let out: HTMLElement[] = [];
 
 	for(const attachment of attachments) {
@@ -522,12 +527,21 @@ export function renderStatus(status: mastodon.Status, label?: HTMLElement): HTML
 	return out;
 }
 
-export function renderTimeline() {
+export function renderTimeline(timeline: Timelines, tag?: string) {
+	if(timeline == undefined) {
+		console.warn("Attempted to render timeline, but timeline was undefined.");
+		return;
+	}
+
 	getTimeline(instanceUrl, timeline, tag, lastStatusId).then((data: any) => {
 		let statuses: DocumentFragment = new DocumentFragment();
 
 		for(const status of data) {
-			statuses.appendChild(renderStatus(new mastodon.Status(status)));
+			const statusElement = new customElements.Status;
+
+			statusElement.setAttribute("statusid", status["id"]);
+
+			statuses.appendChild(statusElement);
 		}
 
 		document.getElementById("timeline").appendChild(statuses);
@@ -541,7 +555,11 @@ export function renderAccountTimeline(id: string) {
 		let statuses: DocumentFragment = new DocumentFragment();
 
 		for(const status of data) {
-			statuses.appendChild(renderStatus(new mastodon.Status(status)));
+			const statusElement = new customElements.Status;
+
+			statusElement.setAttribute("statusid", status["id"]);
+
+			statuses.appendChild(statusElement);
 		}
 
 		document.getElementById("timeline").appendChild(statuses);

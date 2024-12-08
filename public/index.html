@@ -12,7 +12,11 @@
 		<header>
 			<h1>Public Timeline</h1>
 		</header>
-		<main id="timeline"></main>
+		<main>
+			<app-timeline style="display: block; max-width: 1024px; margin: auto;" type="Home">
+				<div id="timeline" slot="statuses"></div>
+			</app-timeline>
+		</main>
 		<button id="load-more-button">Load more</button>
 	</body>
 </html>
