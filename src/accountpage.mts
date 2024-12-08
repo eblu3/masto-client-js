@@ -6,7 +6,6 @@ const accountHandle: string | null = new URLSearchParams(document.location.searc
 if(accountId != null) {
 	document.getElementById("profile-header")?.setAttribute("acctid", accountId);
 	document.getElementById("timeline-component")?.setAttribute("acctid", accountId);
-	renderAccountTimeline(accountId);
 } else if(accountHandle != null) {
 	document.getElementById("profile-header")?.setAttribute("acct", accountHandle);
 	getAccountIdFromHandle(accountHandle).then((id: string) => {

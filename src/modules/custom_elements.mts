@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines} from "./masto_ts.mjs";
+import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines, getAccountTimeline} from "./masto_ts.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -260,7 +260,17 @@ export class Timeline extends HTMLElement {
 				break;
 			case "acctid":
 				if(this.getAttribute("type") == "Account") {
-					renderAccountTimeline(newValue);
+					getAccountTimeline(newValue).then((data: mastodon.Status[]) => {
+						let statuses: DocumentFragment = new DocumentFragment();
+
+						for(const status of data) {
+							const statusElement = new Status;
+							statusElement.setAttribute("statusid", status["id"]);
+							statuses.appendChild(statusElement);
+						}
+
+						this.shadowRoot.appendChild(statuses);
+					});
 				} else {
 					console.warn("Changed account ID, but this timeline isn't set to Account.");
 				}

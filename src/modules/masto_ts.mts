@@ -1,7 +1,6 @@
-import "dotenv/config";
+import * as env from "../env.mjs";
 import * as mastodon from "./mastodon.mjs";
 import * as customElements from "./custom_elements.mjs";
-import {encode} from "blurhash";
 
 export enum Timelines {
 	Public = "/api/v1/timelines/public",
@@ -9,12 +8,12 @@ export enum Timelines {
 	Home = "/api/v1/timelines/home",
 }
 
-export const instanceUrl: URL = new URL(process.env.INSTANCEURL);
+export const instanceUrl: URL = env.instanceUrl;
 export var timeline: Timelines;
 export var tag: string | null;
-export var charLimit: number = Number(process.env.CHARLIMIT);
+export var charLimit: number = env.charLimit;
 
-let token = process.env.TOKEN;
+let token = env.token;
 
 let lastStatusId: string = "";
 

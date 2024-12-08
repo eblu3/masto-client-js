@@ -1,10 +1,4 @@
 {
-  "dependencies": {
-    "blurhash": "^2.0.5",
-    "dotenv": "^16.4.7",
-    "typescript": "^5.7.2"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.1"
-  }
+  "name": "masto-client-js",
+  "packageManager": "yarn@4.5.3"
 }

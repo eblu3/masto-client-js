@@ -1,11 +1,5 @@
 # environment specific variables
-.env
+env.*
 
 # compiled typescript files
-js/**/*.js
-js/**/*.js.map
-js/**/*.mjs
-js/**/*.mjs.map
-
-# nodejs modules
-node_modules
+js/
