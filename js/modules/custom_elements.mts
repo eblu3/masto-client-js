@@ -116,20 +116,19 @@ export class Status extends HTMLElement {
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "statusid") {
-			getStatus(newValue).then((status) => {
-				// TODO: Remove this when boosts get implemented
-				if(status.reblog) {
-					this.remove();
-					return;
-				}
-
+			getStatus(newValue).then(([status, reblog, reblogger]) => {
+				console.log(status);
 				const shadowRoot = this.shadowRoot;
 				const headerRoot = this.getElementsByTagName("header")[0].shadowRoot;
 
 				let postTarget: HTMLElement;
 
+				if(reblog) {
+					headerRoot.getElementById("label").innerHTML = `🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`
+				}
+				
 				headerRoot.getElementById("avatar").setAttribute("src", status.account.avatar.href);
-				headerRoot.getElementById("display-name").innerHTML = renderEmojis(status.account.displayName, status.account.emojis);
+				headerRoot.getElementById("display-name").innerHTML = status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username;
 				headerRoot.getElementById("acct").innerText = `@${status.account.acct}`;
 				(headerRoot.getElementById("profile-link") as HTMLAnchorElement).href = `/user/?acct=@${status.account.acct}`;
 				

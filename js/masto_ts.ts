@@ -86,7 +86,7 @@ export async function getAccountTimeline(id: string): Promise<mastodon.Status[]>
 	}
 }
 
-export async function getStatus(id: string): Promise<mastodon.Status> | null {
+export async function getStatus(id: string): Promise<[mastodon.Status, boolean, mastodon.Account]> | null {
 	try {
 		let response;
 
@@ -106,11 +106,7 @@ export async function getStatus(id: string): Promise<mastodon.Status> | null {
 
 		const status = new mastodon.Status(await response.json());
 
-		if(status.reblog) {
-			return status.reblog
-		} else {
-			return status;
-		}
+		return status.reblog ? [status.reblog, true, status.account] : [status, false, undefined];
 	} catch(error) {
 		console.error(error.message);
 		return null;
@@ -568,11 +564,11 @@ export function renderAccountTimeline(id: string) {
 	})
 }
 
-export function renderStatusPage(id: string) {
-	getStatus(id).then((status: mastodon.Status) => {
-		document.body.appendChild(renderStatus(status));
-	})
-}
+// export function renderStatusPage(id: string) {
+// 	getStatus(id).then((status: mastodon.Status) => {
+// 		document.body.appendChild(renderStatus(status));
+// 	})
+// }
 
 export function renderAccountPage(id?: string, acct?: string) {
 	if(id) {
