@@ -2,11 +2,7 @@
 	<article id="status-root">
 		<slot name="header"></slot>
 		<main>
-			<div id="post-content">
-				<p>This is a post.</p>
-				<slot name="card"></slot>
-			</div>
-			<div id="post-attachments"></div>
+			<slot name="content"></slot>
 		</main>
 		<p><a id="link" href="#"><time id="time">post time</time></a></p>
 		<p><a id="post-url" href="#">View on instance</a></p>
@@ -28,5 +24,20 @@
 </template>
 
 <template id="content">
+	<div slot="content">
+		<div id="post-content"></div>
+		<slot name="card"></slot>
+	</div>
+	<div id="post-attachments"></div>
+</template>
 
+<template id="content-cw">
+	<details slot="content">
+		<summary id="cw" class="content-warning">⚠️ Sensitive content</summary>
+		<div>
+			<div id="post-content"></div>
+			<slot name="card"></slot>
+		</div>
+		<div id="post-attachments"></div>
+	</details>
 </template>

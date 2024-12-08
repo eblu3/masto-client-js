@@ -8,6 +8,8 @@ let cardStylesheet: CSSStyleSheet;
 let timelineStylesheet: CSSStyleSheet;
 
 let statusHeaderTemplate: DocumentFragment;
+let statusContentTemplate: DocumentFragment;
+let statusContentWarnedTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
 let cardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
@@ -95,6 +97,30 @@ export class StatusHeader extends HTMLElement {
 	}
 }
 
+export class StatusContent extends HTMLElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
+		shadow.appendChild(statusContentTemplate.cloneNode(true));
+	}
+}
+
+export class StatusContentWarned extends HTMLElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
+		shadow.appendChild(statusContentWarnedTemplate.cloneNode(true));
+	}
+}
+
 export class Status extends HTMLElement {
 	static observedAttributes = ["statusid", "sensitive", "spoilertext"];
 
@@ -122,6 +148,7 @@ export class Status extends HTMLElement {
 				const headerRoot = this.getElementsByTagName("header")[0].shadowRoot;
 
 				let postTarget: HTMLElement;
+				let content: HTMLElement;
 
 				if(reblog) {
 					headerRoot.getElementById("label").innerHTML = `🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`
@@ -138,35 +165,37 @@ export class Status extends HTMLElement {
 					shadowRoot.getElementById("status-root").removeAttribute("lang");
 				}
 
-				shadowRoot.getElementById("post-content").innerText = "";
-
 				if(status.sensitive || status.spoilerText != "") {
-					const details = document.createElement("details");
-					const summary = document.createElement("summary");
+					if(this.getElementsByTagName("app-status-content").length > 0) {
+						this.getElementsByTagName("app-status-content")[0].remove;
+					}
 
-					details.id = "cw";
-
-					summary.setAttribute("class", "content-warning");
+					if(this.getElementsByTagName("app-status-content-warned").length <= 0) {
+						content = new StatusContent;
+						content.slot = "content";
+						this.appendChild(content);
+					}
 
 					if(status.spoilerText != "") {
-						summary.innerText = `⚠️ ${status.spoilerText}`;
-					} else {
-						summary.innerText = "⚠️ Sensitive content";
+						content.shadowRoot.getElementById("cw").innerText = `⚠️ ${status.spoilerText}`;
 					}
 
-					details.appendChild(summary);
-					shadowRoot.getElementById("post-content").appendChild(details);
-
-					postTarget = details;
+					postTarget = content.shadowRoot.getElementById("post-content");
 				} else {
-					if(shadowRoot.getElementById("cw")) {
-						shadowRoot.getElementById("cw").remove();
+					if(this.getElementsByTagName("app-status-content-warned").length > 0) {
+						this.getElementsByTagName("app-status-content-warned")[0].remove;
 					}
 
-					postTarget = shadowRoot.getElementById("post-content");
+					if(this.getElementsByTagName("app-status-content").length <= 0) {
+						content = new StatusContent;
+						content.slot = "content";
+						this.appendChild(content);
+					}
+
+					postTarget = content.shadowRoot.getElementById("post-content");
 				}
 
-				postTarget.innerHTML += renderEmojis(status.content, status.emojis);
+				postTarget.innerHTML = renderEmojis(status.content, status.emojis);
 				shadowRoot.getElementById("post-url").setAttribute("href", new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href);
 				(shadowRoot.getElementById("link") as HTMLAnchorElement).href = `/status/?id=${status.id}`;
 				(shadowRoot.getElementById("time") as HTMLTimeElement).dateTime = status.createdAt.toISOString();
@@ -182,13 +211,14 @@ export class Status extends HTMLElement {
 				if(status.card != null) {
 					let cardRoot;
 
-					if(this.getElementsByTagName("app-card").length <= 0) {
+					if(content.shadowRoot.getElementById("card") == null) {
 						const card = new Card;
 						card.slot = "card";
-						this.appendChild(card);
+						card.id = "card";
+						content.shadowRoot.appendChild(card);
 						cardRoot = card.shadowRoot;
 					} else {
-						cardRoot = this.getElementsByTagName("app-card")[0].shadowRoot;
+						cardRoot = content.shadowRoot.getElementById("card").shadowRoot;
 					}
 
 					if(status.card.image != null) {
@@ -205,8 +235,8 @@ export class Status extends HTMLElement {
 					(cardRoot.getElementById("link") as HTMLAnchorElement).href = status.card.url.href;
 					cardRoot.getElementById("title").innerText = status.card.title;
 					cardRoot.getElementById("description").innerHTML = status.card.description;
-				} else if(this.getElementsByTagName("app-card").length >= 1) {
-					(this.getElementsByTagName("app-card")[0] as HTMLElement).remove;
+				} else if(content.shadowRoot.getElementById("card") != null) {
+					content.shadowRoot.getElementById("card").remove;
 				}
 			});
 		}
@@ -318,6 +348,8 @@ async function getTemplate(url: string, templateId: string): Promise<DocumentFra
 
 async function initTemplates() {
 	statusHeaderTemplate = await getTemplate("/templates/status.html", "header");
+	statusContentTemplate = await getTemplate("/templates/status.html", "content");
+	statusContentWarnedTemplate = await getTemplate("/templates/status.html", "content-cw");
 	statusTemplate = await getTemplate("/templates/status.html", "status");
 	cardTemplate = await getTemplate("/templates/card.html", "card");
 	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
@@ -337,6 +369,8 @@ function initComponents() {
 			customElements.define("app-timeline", Timeline);
 			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
 			customElements.define("app-status-header", StatusHeader, {extends: "header"});
+			customElements.define("app-status-content", StatusContent);
+			customElements.define("app-status-content-warned", StatusContentWarned);
 			customElements.define("app-status", Status);
 			customElements.define("app-card", Card);
 		});
