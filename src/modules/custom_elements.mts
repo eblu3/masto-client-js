@@ -171,7 +171,7 @@ export class Status extends HTMLElement {
 					}
 
 					if(this.getElementsByTagName("app-status-content-warned").length <= 0) {
-						content = new StatusContent;
+						content = new StatusContentWarned;
 						content.slot = "content";
 						this.appendChild(content);
 					}
@@ -202,7 +202,7 @@ export class Status extends HTMLElement {
 				shadowRoot.getElementById("time").innerText = getRelativeTimeString(status.createdAt);
 
 				if(status.mediaAttachments.length > 0) {
-					const attachmentContainer = shadowRoot.getElementById("post-attachments");
+					const attachmentContainer = content.shadowRoot.getElementById("post-attachments");
 					for(const attachment of renderAttachments(status.mediaAttachments)) {
 						attachmentContainer.appendChild(attachment);
 					}
