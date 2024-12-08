@@ -1,6 +1,8 @@
 {
   "dependencies": {
-    "dotenv": "^16.4.7"
+    "blurhash": "^2.0.5",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.1"

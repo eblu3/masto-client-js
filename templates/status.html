@@ -2,10 +2,12 @@
 	<article id="status-root">
 		<slot name="header"></slot>
 		<main>
-			<div id="post-content"><p>This is a post.</p></div>
-			<slot name="card"></slot>
+			<div id="post-content">
+				<p>This is a post.</p>
+				<slot name="card"></slot>
+			</div>
+			<div id="post-attachments"></div>
 		</main>
-		<div id="post-attachments"></div>
 		<p><a id="link" href="#"><time id="time">post time</time></a></p>
 		<p><a id="post-url" href="#">View on instance</a></p>
 	</article>

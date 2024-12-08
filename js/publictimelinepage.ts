@@ -1,4 +1,4 @@
-import { setTimeline, Timelines, renderTimeline } from "./masto_ts.js";
+import { setTimeline, Timelines, renderTimeline } from "./modules/masto_ts.mjs";
 
 document.getElementById("load-more-button").addEventListener("click", () => {
 	renderTimeline(Timelines.Public);

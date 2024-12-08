@@ -1,4 +1,4 @@
-import { setTimeline, Timelines, renderTimeline, postStatus, renderStatus, charLimit } from "./masto_ts.js";
+import { setTimeline, Timelines, renderTimeline, postStatus, renderStatus, charLimit } from "./modules/masto_ts.mjs";
 
 const postInput: HTMLTextAreaElement = (document.getElementById("post-input") as HTMLTextAreaElement);
 const postButton: HTMLButtonElement = (document.getElementById("post-button") as HTMLButtonElement);

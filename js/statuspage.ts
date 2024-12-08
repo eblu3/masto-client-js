@@ -1,4 +1,4 @@
-import { renderStatusPage } from "./masto_ts.js";
+import { renderStatusPage } from "./modules/masto_ts.mjs";
 
 const statusId = new URLSearchParams(document.location.search).get("id");
 

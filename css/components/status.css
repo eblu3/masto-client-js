@@ -62,7 +62,7 @@ main {
 #post-attachments {
 	display: grid;
 
-	max-width: 100%;
+	margin-left: calc(var(--post-avatar-size) * -1);
 
 	gap: 0.5em;
 	grid-template-columns: repeat(auto-fit, minmax(min(100% - 0.5em, 50% - 0.5em), 1fr));

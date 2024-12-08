@@ -1,6 +1,7 @@
-import * as env from "../.env.js"; // look, I'm not here to fiddle with node all night. you can probably figure this one out yourself.
-import * as mastodon from "./modules/mastodon.mjs";
-import * as customElements from "./modules/custom_elements.mjs";
+import "dotenv/config";
+import * as mastodon from "./mastodon.mjs";
+import * as customElements from "./custom_elements.mjs";
+import {encode} from "blurhash";
 
 export enum Timelines {
 	Public = "/api/v1/timelines/public",
@@ -8,12 +9,12 @@ export enum Timelines {
 	Home = "/api/v1/timelines/home",
 }
 
-export const instanceUrl: URL = env.instanceUrl;
+export const instanceUrl: URL = new URL(process.env.INSTANCEURL);
 export var timeline: Timelines;
 export var tag: string | null;
-export var charLimit: number = env.charLimit;
+export var charLimit: number = Number(process.env.CHARLIMIT);
 
-let token = env.token;
+let token = process.env.TOKEN;
 
 let lastStatusId: string = "";
 

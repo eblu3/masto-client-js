@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines} from "../masto_ts.js";
+import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines} from "./masto_ts.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -244,7 +244,18 @@ export class Timeline extends HTMLElement {
 		switch(name) {
 			case "type":
 				if(!(newValue == "Account" || newValue == "Hashtag")) {
-					renderTimeline(Timelines[newValue as keyof typeof Timelines]);
+					// renderTimeline(Timelines[newValue as keyof typeof Timelines]);
+					getTimeline(instanceUrl, Timelines[newValue as keyof typeof Timelines], undefined, undefined).then((data: any) => {
+						let statuses: DocumentFragment = new DocumentFragment();
+						
+						for(const status of data) {
+							const statusElement = new Status;
+							statusElement.setAttribute("statusid", status["id"]);
+							statuses.appendChild(statusElement);
+						}
+
+						this.shadowRoot.appendChild(statuses);
+					});
 				}
 				break;
 			case "acctid":
@@ -256,7 +267,21 @@ export class Timeline extends HTMLElement {
 				break;
 			case "tag":
 				if(this.getAttribute("type") == "Hashtag") {
-					renderTimeline(Timelines.Hashtag, newValue);
+					if(this.shadowRoot) {
+						this.shadowRoot.innerHTML = "";
+					}
+
+					getTimeline(instanceUrl, Timelines.Hashtag, newValue, undefined).then((data: any) => {
+						let statuses: DocumentFragment = new DocumentFragment();
+						
+						for(const status of data) {
+							const statusElement = new Status;
+							statusElement.setAttribute("statusid", status["id"]);
+							statuses.appendChild(statusElement);
+						}
+
+						this.shadowRoot.appendChild(statuses);
+					});
 				} else {
 					console.warn("Changed tag, but this timeline isn't set to Hashtag.");
 				}

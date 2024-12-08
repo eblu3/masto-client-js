@@ -1,4 +1,4 @@
-import { renderAccountPage, renderAccountTimeline, getAccountByHandle, getAccountIdFromHandle } from "./masto_ts.js";
+import { renderAccountPage, renderAccountTimeline, getAccountByHandle, getAccountIdFromHandle } from "./modules/masto_ts.mjs";
 
 let accountId: string | null = new URLSearchParams(document.location.search).get("id");
 const accountHandle: string | null = new URLSearchParams(document.location.search).get("acct");
