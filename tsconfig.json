@@ -14,11 +14,11 @@
 		"js/modules/mastodon.mts",
 		"js/modules/includes.mts",
 		"js/modules/masto_ts.mts",
-		"js/common.ts",
-		"js/homepage.ts",
-		"js/publictimelinepage.ts",
-		"js/tagpage.ts",
-		"js/accountpage.ts",
-		"js/statuspage.ts"
+		"js/common.mts",
+		"js/homepage.mts",
+		"js/publictimelinepage.mts",
+		"js/tagpage.mts",
+		"js/accountpage.mts",
+		"js/statuspage.mts"
 	]
 }

@@ -21,7 +21,7 @@ addEventListener("resize", (event) => {
 	// resizeAllImagesToFit();
 });
 
-getInclude(new URL("/include/navbar.html", window.location.origin)).then((include: DocumentFragment) => {
+getInclude(new URL("/include/navbar.html", window.location.origin))?.then((include: DocumentFragment) => {
 	document.getElementsByTagName("header")[0].prepend(include);
 });
 

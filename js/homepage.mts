@@ -4,10 +4,6 @@ const postInput: HTMLTextAreaElement = (document.getElementById("post-input") as
 const postButton: HTMLButtonElement = (document.getElementById("post-button") as HTMLButtonElement);
 const characterCounter: HTMLParagraphElement = (document.getElementById("character-counter") as HTMLParagraphElement);
 
-document.getElementById("load-more-button").addEventListener("click", () => {
-	renderTimeline(Timelines.Home);
-});
-
 postInput.style.height = `${postInput.scrollHeight}px`;
 
 postInput.addEventListener("input", (event) => {
@@ -24,12 +20,12 @@ postInput.addEventListener("input", (event) => {
 });
 
 postButton.addEventListener("click", (event) => {
-	postStatus(postInput.value).then((status) => {
+	postStatus(postInput.value)?.then((status) => {
 		postInput.value = "";
 		postButton.disabled = true;
 		
 		const timeline = document.getElementById("timeline");
-		timeline.insertBefore(renderStatus(status),timeline.getElementsByTagName("article")[0]);
+		timeline?.insertBefore(renderStatus(status),timeline.getElementsByTagName("article")[0]);
 	});
 });
 
@@ -40,5 +36,3 @@ characterCounter.innerText = `${postInput.value.length}/${charLimit}`;
 // customElements.whenDefined("app-status").then(() => {
 // 	renderTimeline();
 // });
-
-export {};

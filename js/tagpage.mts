@@ -6,8 +6,8 @@ document.title = `#${tagToSearch}`;
 
 (document.getElementById("tag-input") as HTMLInputElement).value = `${tagToSearch}`; 
 
-document.getElementById("tag-input").addEventListener("change", (event) => {
-	document.getElementById("timeline-component").setAttribute("tag", (event.target as HTMLInputElement).value);
+document.getElementById("tag-input")?.addEventListener("change", (event) => {
+	document.getElementById("timeline-component")?.setAttribute("tag", (event.target as HTMLInputElement).value);
 });
 
 // document.getElementById("load-more-button").addEventListener("click", () => {
@@ -15,7 +15,7 @@ document.getElementById("tag-input").addEventListener("change", (event) => {
 // });
 
 // setTimeline(Timelines.Hashtag);
-document.getElementById("timeline-component").setAttribute("tag", tagToSearch);
+tagToSearch ? document.getElementById("timeline-component")?.setAttribute("tag", tagToSearch) : document.getElementById("timeline-component")?.removeAttribute("tag");
 
 // function regenTimeline(tag?: string) {
 // 	console.log(tag);
@@ -35,5 +35,3 @@ document.getElementById("timeline-component").setAttribute("tag", tagToSearch);
 // 	document.getElementById("timeline").replaceChildren();
 // 	renderTimeline();
 // }
-
-export {};
