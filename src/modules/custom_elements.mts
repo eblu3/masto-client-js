@@ -98,34 +98,34 @@ export class Card extends HTMLElement {
 }
 
 export class StatusHeader extends HTMLElement {
-	label: HTMLParagraphElement;
-	avatar: HTMLImageElement;
-	displayName: HTMLSpanElement;
-	handle: HTMLSpanElement;
-	profileLink: HTMLAnchorElement;
+	#label: HTMLParagraphElement;
+	#avatar: HTMLImageElement;
+	#displayName: HTMLSpanElement;
+	#handle: HTMLSpanElement;
+	#profileLink: HTMLAnchorElement;
 
 	constructor() {
 		super();
 	}
 
 	setLabel(text: string) {
-		this.label.innerHTML = text;
+		this.#label.innerHTML = text;
 	}
 
 	setAvatar(url: URL) {
-		this.avatar.src = url.href;
+		this.#avatar.src = url.href;
 	}
 
 	setDisplayName(name: string) {
-		this.displayName.innerHTML = name;
+		this.#displayName.innerHTML = name;
 	}
 
 	setHandle(acct: string) {
-		this.handle.innerText = acct;
+		this.#handle.innerText = acct;
 	}
 
 	setProfileLink(url: URL) {
-		this.profileLink.href = url.href;
+		this.#profileLink.href = url.href;
 	}
 
 	setProfileInfo(avatarUrl: URL, displayName: string, handle: string, profileLink: URL) {
@@ -140,41 +140,45 @@ export class StatusHeader extends HTMLElement {
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 		shadow.appendChild(statusHeaderTemplate.cloneNode(true));
 
-		this.label = shadow.getElementById("label") as HTMLParagraphElement;
-		this.avatar = shadow.getElementById("avatar") as HTMLImageElement;
-		this.displayName = shadow.getElementById("display-name");
-		this.handle = shadow.getElementById("acct");
-		this.profileLink = shadow.getElementById("profile-link") as HTMLAnchorElement;
+		this.#label = shadow.getElementById("label") as HTMLParagraphElement;
+		this.#avatar = shadow.getElementById("avatar") as HTMLImageElement;
+		this.#displayName = shadow.getElementById("display-name");
+		this.#handle = shadow.getElementById("acct");
+		this.#profileLink = shadow.getElementById("profile-link") as HTMLAnchorElement;
 	}
 }
 
 export class StatusContent extends HTMLElement {
-	postContent: HTMLDivElement;
-	attachmentContainer: HTMLDivElement;
-	card: LinkCard;
+	#postContent: HTMLDivElement;
+	#attachmentContainer: HTMLDivElement;
+	#card: LinkCard;
 
 	constructor() {
 		super();
 	}
 
 	setContent(content: string) {
-		this.postContent.innerHTML = content;
+		if(this.#postContent) {
+			this.#postContent.innerHTML = content;
+		} else {
+			console.error(`post content element on ${this} doesn't exist!`);
+		}
 	}
 
 	setAttachments(attachments: HTMLElement[]) {
 		for(const attachment of attachments) {
-			this.attachmentContainer.appendChild(attachment);
+			this.#attachmentContainer.appendChild(attachment);
 		}
 	}
 
 	addCard(linkUrl?: URL, title?: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
-		if(this.card) {
+		if(this.#card) {
 			console.warn("card already exists");
 		} else {
 			const card = new LinkCard;
 			card.slot = "card";
 			this.appendChild(card);
-			this.card = card;
+			this.#card = card;
 			
 			if(linkUrl && title) {
 				card.setAll(linkUrl, title, imageUrl, description, imageWidth, imageHeight);
@@ -183,9 +187,9 @@ export class StatusContent extends HTMLElement {
 	}
 
 	removeCard() {
-		if(this.card) {
-			this.card.remove();
-			this.card = undefined;
+		if(this.#card) {
+			this.#card.remove();
+			this.#card = undefined;
 		} else {
 			console.warn("tried to remove card but it doesn't exist");
 		}
@@ -196,20 +200,20 @@ export class StatusContent extends HTMLElement {
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 		shadow.appendChild(statusContentTemplate.cloneNode(true));
 
-		this.postContent = shadow.getElementById("post-content") as HTMLDivElement;
-		this.attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
+		this.#postContent = shadow.getElementById("post-content") as HTMLDivElement;
+		this.#attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
 	}
 }
 
 export class StatusContentWarned extends StatusContent {
-	contentWarning: HTMLElement;
+	#contentWarning: HTMLElement;
 	
 	constructor() {
 		super();
 	}
 
 	setContentWarning(cw: string) {
-		this.contentWarning.innerText = cw;
+		this.#contentWarning.innerText = cw;
 	}
 
 	connectedCallback() {
@@ -217,7 +221,7 @@ export class StatusContentWarned extends StatusContent {
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 		shadow.appendChild(statusContentWarnedTemplate.cloneNode(true));
 
-		this.contentWarning = shadow.getElementById("cw");
+		this.#contentWarning = shadow.getElementById("cw");
 	}
 }
 
@@ -227,9 +231,9 @@ export class Status extends Card {
 	header: StatusHeader;
 	content: StatusContent;
 
-	link: HTMLAnchorElement;
-	time: HTMLTimeElement;
-	postUrl: HTMLAnchorElement;
+	#link: HTMLAnchorElement;
+	#time: HTMLTimeElement;
+	#postUrl: HTMLAnchorElement;
 
 	constructor() {
 		super();
@@ -248,9 +252,9 @@ export class Status extends Card {
 
 		this.header = header;
 
-		this.link = shadow.getElementById("link") as HTMLAnchorElement;
-		this.time = shadow.getElementById("time") as HTMLTimeElement;
-		this.postUrl = shadow.getElementById("post-url") as HTMLAnchorElement;
+		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
+		this.#time = shadow.getElementById("time") as HTMLTimeElement;
+		this.#postUrl = shadow.getElementById("post-url") as HTMLAnchorElement;
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
@@ -302,10 +306,10 @@ export class Status extends Card {
 				this.content.setContent(renderEmojis(status.content, status.emojis));
 
 				// TODO: separate these into a footer component
-				this.postUrl.href = new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href;
-				this.link.href = `/status/?id=${status.id}`;
-				this.time.dateTime = status.createdAt.toISOString();
-				this.time.innerText = getRelativeTimeString(status.createdAt);
+				this.#postUrl.href = new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href;
+				this.#link.href = `/status/?id=${status.id}`;
+				this.#time.dateTime = status.createdAt.toISOString();
+				this.#time.innerText = getRelativeTimeString(status.createdAt);
 
 				if(status.mediaAttachments.length > 0) {
 					this.content.setAttachments(renderAttachments(status.mediaAttachments));
@@ -322,33 +326,33 @@ export class Status extends Card {
 }
 
 export class LinkCard extends HTMLElement {
-	link: HTMLAnchorElement;
-	image: HTMLImageElement;
-	titleElement: HTMLHeadingElement;
-	description: HTMLParagraphElement;
+	#link: HTMLAnchorElement;
+	#image: HTMLImageElement;
+	#title: HTMLHeadingElement;
+	#description: HTMLParagraphElement;
 	
 	constructor() {
 		super();
 	}
 
 	setLink(url: URL) {
-		this.link.href = url.href;
+		this.#link.href = url.href;
 	}
 
 	setImage(url: URL, imageWidth?: number, imageHeight?: number) {
 		// TODO: maybe some blurhash stuff here
 
-		this.image.src = url.href;
-		this.image.hidden = false;
+		this.#image.src = url.href;
+		this.#image.hidden = false;
 		this.style.maxWidth = `${imageWidth}px`;
 	}
 
 	setTitle(text: string) {
-		this.titleElement.innerText = text;
+		this.#title.innerText = text;
 	}
 
 	setDescription(text: string) {
-		this.description.innerHTML = text;
+		this.#description.innerHTML = text;
 	}
 
 	setAll(linkUrl: URL, title: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
@@ -367,10 +371,10 @@ export class LinkCard extends HTMLElement {
 		shadow.adoptedStyleSheets = [commonStylesheet, linkCardStylesheet];
 		shadow.appendChild(linkCardTemplate.cloneNode(true));
 
-		this.link = shadow.getElementById("link") as HTMLAnchorElement;
-		this.image = shadow.getElementById("image") as HTMLImageElement;
-		this.titleElement = shadow.getElementById("title") as HTMLHeadingElement;
-		this.description = shadow.getElementById("description") as HTMLParagraphElement;
+		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
+		this.#image = shadow.getElementById("image") as HTMLImageElement;
+		this.#title = shadow.getElementById("title") as HTMLHeadingElement;
+		this.#description = shadow.getElementById("description") as HTMLParagraphElement;
 	}
 }
 
