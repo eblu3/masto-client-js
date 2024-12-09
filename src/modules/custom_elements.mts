@@ -4,14 +4,15 @@ import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, get
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
 let statusStylesheet: CSSStyleSheet;
-let cardStylesheet: CSSStyleSheet;
+let linkCardStylesheet: CSSStyleSheet;
 let timelineStylesheet: CSSStyleSheet;
 
+let cardTemplate: DocumentFragment;
 let statusHeaderTemplate: DocumentFragment;
 let statusContentTemplate: DocumentFragment;
 let statusContentWarnedTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
-let cardTemplate: DocumentFragment;
+let linkCardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
 
 export class ProfileHeader extends HTMLElement {
@@ -83,46 +84,151 @@ export class ProfileHeader extends HTMLElement {
 	}
 }
 
-export class StatusHeader extends HTMLElement {
+export class Card extends HTMLElement {
 	constructor() {
 		super();
 	}
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.appendChild(cardTemplate.cloneNode(true));
+	}
+}
 
+export class StatusHeader extends HTMLElement {
+	#label: HTMLParagraphElement;
+	#avatar: HTMLImageElement;
+	#displayName: HTMLSpanElement;
+	#handle: HTMLSpanElement;
+	#profileLink: HTMLAnchorElement;
+
+	constructor() {
+		super();
+	}
+
+	setLabel(text: string) {
+		this.#label.innerHTML = text;
+	}
+
+	setAvatar(url: URL) {
+		this.#avatar.src = url.href;
+	}
+
+	setDisplayName(name: string) {
+		this.#displayName.innerHTML = name;
+	}
+
+	setHandle(acct: string) {
+		this.#handle.innerText = acct;
+	}
+
+	setProfileLink(url: URL) {
+		this.#profileLink.href = url.href;
+	}
+
+	setProfileInfo(avatarUrl: URL, displayName: string, handle: string, profileLink: URL) {
+		this.setAvatar(avatarUrl);
+		this.setDisplayName(displayName);
+		this.setHandle(handle);
+		this.setProfileLink(profileLink);
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
-
 		shadow.appendChild(statusHeaderTemplate.cloneNode(true));
+
+		this.#label = shadow.getElementById("label") as HTMLParagraphElement;
+		this.#avatar = shadow.getElementById("avatar") as HTMLImageElement;
+		this.#displayName = shadow.getElementById("display-name");
+		this.#handle = shadow.getElementById("acct");
+		this.#profileLink = shadow.getElementById("profile-link") as HTMLAnchorElement;
 	}
 }
 
 export class StatusContent extends HTMLElement {
+	#postContent: HTMLDivElement;
+	#attachmentContainer: HTMLDivElement;
+	#card: LinkCard;
+
 	constructor() {
 		super();
+	}
+
+	setContent(content: string) {
+		this.#postContent.innerHTML = content;
+	}
+
+	setAttachments(attachments: HTMLElement[]) {
+		for(const attachment of attachments) {
+			this.#attachmentContainer.appendChild(attachment);
+		}
+	}
+
+	addCard(linkUrl?: URL, title?: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
+		if(this.#card) {
+			console.warn("card already exists");
+		} else {
+			const card = new LinkCard;
+			card.slot = "card";
+			this.appendChild(card);
+			this.#card = card;
+			
+			if(linkUrl && title) {
+				card.setAll(linkUrl, title, imageUrl, description, imageWidth, imageHeight);
+			}
+		}
+	}
+
+	removeCard() {
+		if(this.#card) {
+			this.#card.remove();
+			this.#card = undefined;
+		} else {
+			console.warn("tried to remove card but it doesn't exist");
+		}
 	}
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 		shadow.appendChild(statusContentTemplate.cloneNode(true));
+
+		this.#postContent = shadow.getElementById("post-content") as HTMLDivElement;
+		this.#attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
 	}
 }
 
-export class StatusContentWarned extends HTMLElement {
+export class StatusContentWarned extends StatusContent {
+	#contentWarning: HTMLElement;
+	
 	constructor() {
 		super();
+	}
+
+	setContentWarning(cw: string) {
+		this.#contentWarning.innerText = cw;
 	}
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 		shadow.appendChild(statusContentWarnedTemplate.cloneNode(true));
+
+		this.#contentWarning = shadow.getElementById("cw");
 	}
 }
 
-export class Status extends HTMLElement {
+export class Status extends Card {
 	static observedAttributes = ["statusid", "sensitive", "spoilertext"];
+
+	header: StatusHeader;
+	content: StatusContent;
+
+	#link: HTMLAnchorElement;
+	#time: HTMLTimeElement;
+	#postUrl: HTMLAnchorElement;
 
 	constructor() {
 		super();
@@ -138,107 +244,75 @@ export class Status extends HTMLElement {
 
 		shadow.appendChild(statusTemplate.cloneNode(true));
 		this.appendChild(header);
+
+		this.header = header;
+
+		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
+		this.#time = shadow.getElementById("time") as HTMLTimeElement;
+		this.#postUrl = shadow.getElementById("post-url") as HTMLAnchorElement;
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "statusid") {
 			getStatus(newValue).then(([status, reblog, reblogger]) => {
-				console.log(status);
-				const shadowRoot = this.shadowRoot;
-				const headerRoot = this.getElementsByTagName("header")[0].shadowRoot;
-
-				let postTarget: HTMLElement;
-				let content: HTMLElement;
-
 				if(reblog) {
-					headerRoot.getElementById("label").innerHTML = `🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`
+					this.header.setLabel(`🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`);
 				} else if(status.inReplyToId) {
-					headerRoot.getElementById("label").innerHTML = "💬 reply";
+					this.header.setLabel("💬 reply");
 				}
 				
-				headerRoot.getElementById("avatar").setAttribute("src", status.account.avatar.href);
-				headerRoot.getElementById("display-name").innerHTML = status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username;
-				headerRoot.getElementById("acct").innerText = `@${status.account.acct}`;
-				(headerRoot.getElementById("profile-link") as HTMLAnchorElement).href = `/user/?acct=@${status.account.acct}`;
+				this.header.setProfileInfo(status.account.avatar,
+					status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
+					`@${status.account.acct}`,
+					new URL(status.account.acct, new URL("/user/?acct=@", instanceUrl))
+				);
 				
 				if(status.language) {
-					shadowRoot.getElementById("status-root").setAttribute("lang", status.language.language);
-				} else if(shadowRoot.getElementById("status-root").hasAttribute("lang")) {
-					shadowRoot.getElementById("status-root").removeAttribute("lang");
+					this.setAttribute("lang", status.language.language);
+				} else if(this.hasAttribute("lang")) {
+					this.removeAttribute("lang");
 				}
 
 				if(status.sensitive || status.spoilerText != "") {
-					if(this.getElementsByTagName("app-status-content").length > 0) {
-						this.getElementsByTagName("app-status-content")[0].remove;
-					}
+					if(!(this.content instanceof StatusContentWarned)) {
+						if(this.content) {
+							this.content.remove();
+						}
 
-					if(this.getElementsByTagName("app-status-content-warned").length <= 0) {
-						content = new StatusContentWarned;
-						content.slot = "content";
-						this.appendChild(content);
+						this.content = new StatusContentWarned;
+						this.content.slot = "content";
+						this.appendChild(this.content);
 					}
 
 					if(status.spoilerText != "") {
-						content.shadowRoot.getElementById("cw").innerText = `⚠️ ${status.spoilerText}`;
+						(this.content as StatusContentWarned).setContentWarning(`⚠️ ${status.spoilerText}`);
 					}
-
-					postTarget = content.shadowRoot.getElementById("post-content");
 				} else {
-					if(this.getElementsByTagName("app-status-content-warned").length > 0) {
-						this.getElementsByTagName("app-status-content-warned")[0].remove;
+					if(this.content && this.content instanceof StatusContentWarned) {
+						this.content.remove();
 					}
 
-					if(this.getElementsByTagName("app-status-content").length <= 0) {
-						content = new StatusContent;
-						content.slot = "content";
-						this.appendChild(content);
-					}
-
-					postTarget = content.shadowRoot.getElementById("post-content");
+					this.content = new StatusContent;
+					this.content.slot = "content";
+					this.appendChild(this.content);
 				}
 
-				postTarget.innerHTML = renderEmojis(status.content, status.emojis);
-				shadowRoot.getElementById("post-url").setAttribute("href", new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href);
-				(shadowRoot.getElementById("link") as HTMLAnchorElement).href = `/status/?id=${status.id}`;
-				(shadowRoot.getElementById("time") as HTMLTimeElement).dateTime = status.createdAt.toISOString();
-				shadowRoot.getElementById("time").innerText = getRelativeTimeString(status.createdAt);
+				this.content.setContent(renderEmojis(status.content, status.emojis));
+
+				// TODO: separate these into a footer component
+				this.#postUrl.href = new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href;
+				this.#link.href = `/status/?id=${status.id}`;
+				this.#time.dateTime = status.createdAt.toISOString();
+				this.#time.innerText = getRelativeTimeString(status.createdAt);
 
 				if(status.mediaAttachments.length > 0) {
-					const attachmentContainer = content.shadowRoot.getElementById("post-attachments");
-					for(const attachment of renderAttachments(status.mediaAttachments)) {
-						attachmentContainer.appendChild(attachment);
-					}
+					this.content.setAttachments(renderAttachments(status.mediaAttachments));
 				}
 
 				if(status.card != null) {
-					let cardRoot;
-
-					if(content.getElementsByTagName("app-link-card").length <= 0) {
-						const card = new LinkCard;
-						card.slot = "card";
-						card.id = "card";
-						content.appendChild(card);
-						cardRoot = card.shadowRoot;
-					} else {
-						cardRoot = content.getElementsByTagName("app-link-card")[0].shadowRoot;
-					}
-
-					if(status.card.image != null) {
-						const imageElement = (cardRoot.getElementById("image") as HTMLImageElement);
-						imageElement.src = status.card.image.href;
-						imageElement.hidden = false;
-
-						cardRoot.getElementById("card-root").style.maxWidth = `${status.card.width}px`;
-					} else {
-						(cardRoot.getElementById("image") as HTMLImageElement).hidden = true;
-						cardRoot.getElementById("card-root").style.maxWidth = null;
-					}
-					
-					(cardRoot.getElementById("link") as HTMLAnchorElement).href = status.card.url.href;
-					cardRoot.getElementById("title").innerText = status.card.title;
-					cardRoot.getElementById("description").innerHTML = status.card.description;
-				} else if(content.getElementsByTagName("app-link-card").length > 0) {
-					content.getElementsByTagName("app-link-card")[0].remove;
+					this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
+				} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
+					this.content.removeCard();
 				}
 			});
 		}
@@ -246,16 +320,55 @@ export class Status extends HTMLElement {
 }
 
 export class LinkCard extends HTMLElement {
+	#link: HTMLAnchorElement;
+	#image: HTMLImageElement;
+	#title: HTMLHeadingElement;
+	#description: HTMLParagraphElement;
+	
 	constructor() {
 		super();
 	}
 
+	setLink(url: URL) {
+		this.#link.href = url.href;
+	}
+
+	setImage(url: URL, imageWidth?: number, imageHeight?: number) {
+		// TODO: maybe some blurhash stuff here
+
+		this.#image.src = url.href;
+		this.#image.hidden = false;
+		this.style.maxWidth = `${imageWidth}px`;
+	}
+
+	setTitle(text: string) {
+		this.#title.innerText = text;
+	}
+
+	setDescription(text: string) {
+		this.#description.innerHTML = text;
+	}
+
+	setAll(linkUrl: URL, title: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
+		this.setLink(linkUrl);
+		this.setTitle(title);
+		if(imageUrl) {
+			this.setImage(imageUrl, imageWidth, imageHeight);
+		}
+		if(description) {
+			this.setDescription(description);
+		}
+	}
+
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, linkCardStylesheet];
+		shadow.appendChild(linkCardTemplate.cloneNode(true));
 
-		shadow.adoptedStyleSheets = [commonStylesheet, cardStylesheet];
-
-		shadow.appendChild(cardTemplate.cloneNode(true));
+		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
+		this.#image = shadow.getElementById("image") as HTMLImageElement;
+		this.#title = shadow.getElementById("title") as HTMLHeadingElement;
+		this.#description = shadow.getElementById("description") as HTMLParagraphElement;
 	}
 }
 
@@ -349,11 +462,12 @@ async function getTemplate(url: string, templateId: string): Promise<DocumentFra
 }
 
 async function initTemplates() {
+	cardTemplate = await getTemplate("/templates/card.html", "card");
 	statusHeaderTemplate = await getTemplate("/templates/status.html", "header");
 	statusContentTemplate = await getTemplate("/templates/status.html", "content");
 	statusContentWarnedTemplate = await getTemplate("/templates/status.html", "content-cw");
 	statusTemplate = await getTemplate("/templates/status.html", "status");
-	cardTemplate = await getTemplate("/templates/card.html", "card");
+	linkCardTemplate = await getTemplate("/templates/link-card.html", "card");
 	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
 }
 
@@ -361,13 +475,14 @@ async function initStylesheets() {
 	commonStylesheet = await getStylesheet("/css/components/common.css");
 	profileHeaderStylesheet = await getStylesheet("/css/components/profile-header.css");
 	statusStylesheet = await getStylesheet("/css/components/status.css");
-	cardStylesheet = await getStylesheet("/css/components/card.css");
+	linkCardStylesheet = await getStylesheet("/css/components/link-card.css");
 	timelineStylesheet = await getStylesheet("/css/components/timeline.css");
 }
 
 function initComponents() {
 	initTemplates().then(() => {
 		initStylesheets().then(() => {
+			customElements.define("app-card", Card);
 			customElements.define("app-timeline", Timeline);
 			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
 			customElements.define("app-status-header", StatusHeader, {extends: "header"});
