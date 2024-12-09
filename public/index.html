@@ -9,14 +9,10 @@
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
 	</head>
 	<body>
-		<header>
-			<h1>Public Timeline</h1>
-		</header>
+		<app-nav-sidebar></app-nav-sidebar>
+		<header><h1>Public</h1></header>
 		<main>
-			<app-timeline type="Public">
-				<div id="timeline" slot="statuses"></div>
-			</app-timeline>
+			<app-timeline type="Public"></app-timeline>
 		</main>
-		<button id="load-more-button">Load more</button>
 	</body>
 </html>

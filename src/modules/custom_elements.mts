@@ -6,6 +6,7 @@ let profileHeaderStylesheet: CSSStyleSheet;
 let statusStylesheet: CSSStyleSheet;
 let linkCardStylesheet: CSSStyleSheet;
 let timelineStylesheet: CSSStyleSheet;
+let navigationStylesheet: CSSStyleSheet;
 
 let cardTemplate: DocumentFragment;
 let statusHeaderTemplate: DocumentFragment;
@@ -262,6 +263,9 @@ export class Status extends Card {
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "statusid") {
 			getStatus(newValue).then(([status, reblog, reblogger]) => {
+				const localProfileUrl = new URL("./user/", window.location.origin);
+				localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
+
 				if(reblog) {
 					this.header.setLabel(`🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`);
 				} else if(status.inReplyToId) {
@@ -272,7 +276,7 @@ export class Status extends Card {
 					status.account.avatar,
 					status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
 					parseHandle(`@${status.account.acct}`),
-					new URL(status.account.acct, new URL("/user/?acct=@", instanceUrl))
+					localProfileUrl
 				);
 				
 				if(status.language) {
@@ -459,7 +463,7 @@ export class NavigationSidebar extends HTMLElement {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.adoptedStyleSheets = [commonStylesheet, navigationStylesheet];
 		shadow.appendChild(navigationSidebarTemplate.cloneNode(true));
 	}
 }
@@ -498,6 +502,7 @@ async function initStylesheets() {
 	statusStylesheet = await getStylesheet("/css/components/status.css");
 	linkCardStylesheet = await getStylesheet("/css/components/link-card.css");
 	timelineStylesheet = await getStylesheet("/css/components/timeline.css");
+	navigationStylesheet = await getStylesheet("/css/components/navigation.css");
 }
 
 function initComponents() {

@@ -17,16 +17,41 @@
 
 	--post-avatar-size: 4em;
 
+	--sidebar-width: 8em;
 	--max-item-width: 1024px;
+	--header-height: 5em;
 }
 
 body {
+	display: grid;
+	grid-template-areas:
+		"sidebar header"
+		"sidebar main";
+	grid-template-rows: var(--header-height) 1fr;
+	grid-template-columns: var(--sidebar-width) 1fr;
+
 	margin: 0;
+	overflow: hidden;
+
+	width: 100vw;
+	height: 100vh;
 
 	background-color: var(--background-color);
 	color: var(--foreground-color);
 
 	font-family: sans-serif;
+}
+
+main {
+	grid-area: main;
+
+	max-width: 100%;
+	max-height: 100%;
+	overflow-y: scroll;
+
+	border-top: 1px solid var(--accent-color);
+	border-left: 1px solid var(--accent-color);
+	border-radius: var(--radius-large) 0 0 0;
 }
 
 a {
@@ -44,20 +69,29 @@ button {
 }
 
 body > header {
-	position: sticky;
-	top: 0;
+	grid-area: header;
 
-	padding: 0.5em 10vw;
+	padding: 0 0.5em;
 
 	background-color: var(--background-color);
 
-	border-bottom: 1px solid var(--accent-color);
+	vertical-align: center;
 
 	z-index: 99;
 }
 
-main {
-	margin: 0 1em;
+app-nav-sidebar {
+	grid-area: sidebar;
+
+	display: block;
+
+	width: var(--sidebar-width);
+	height: 100vh;
+
+	margin-top: var(--header-height);
+
+	position: sticky;
+	top: 0;
 }
 
 app-timeline {

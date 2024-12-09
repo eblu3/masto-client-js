@@ -7,14 +7,20 @@ document.title = `#${tagToSearch}`;
 (document.getElementById("tag-input") as HTMLInputElement).value = `${tagToSearch}`; 
 
 document.getElementById("tag-input")?.addEventListener("change", (event) => {
-	document.getElementById("timeline-component")?.setAttribute("tag", (event.target as HTMLInputElement).value);
+	const newTag = (event.target as HTMLInputElement).value;
+	document.getElementById("timeline-component")?.setAttribute("tag", newTag);
+	document.title = `#${newTag}`;
+	
+	const url = new URL(location.href);
+	url.searchParams.set("tag", newTag);
+		
+	history.pushState({}, "", url);
 });
 
 // document.getElementById("load-more-button").addEventListener("click", () => {
 // 	renderTimeline(Timelines.Hashtag, tagToSearch);
 // });
 
-// setTimeline(Timelines.Hashtag);
 tagToSearch ? document.getElementById("timeline-component")?.setAttribute("tag", tagToSearch) : document.getElementById("timeline-component")?.removeAttribute("tag");
 
 // function regenTimeline(tag?: string) {

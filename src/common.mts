@@ -21,9 +21,9 @@ addEventListener("resize", (event) => {
 	// resizeAllImagesToFit();
 });
 
-getInclude(new URL("/include/navbar.html", window.location.origin))?.then((include: DocumentFragment) => {
-	document.getElementsByTagName("header")[0].prepend(include);
-});
+// getInclude(new URL("/include/navbar.html", window.location.origin))?.then((include: DocumentFragment) => {
+// 	document.getElementsByTagName("header")[0].prepend(include);
+// });
 
 // this will execute after everything else loads
 setTimeout(function() {

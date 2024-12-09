@@ -11,13 +11,11 @@
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
 	</head>
 	<body>
-		<header>
-			<h1>User</h1>
-		</header>
-		<app-profile-header id="profile-header"></app-profile-header>
+		<app-nav-sidebar></app-nav-sidebar>
+		<header><h1>User</h1></header>
 		<main>
+			<app-profile-header id="profile-header"></app-profile-header>
 			<app-timeline id="timeline-component" type="Account"></app-timeline>
 		</main>
-		<button id="load-more-button">Load more</button>
 	</body>
 </html>
