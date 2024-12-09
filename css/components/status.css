@@ -68,6 +68,10 @@ main {
 	border-color: var(--accent-color-lighter);
 }
 
+#post-content {
+	margin: 1em 0;
+}
+
 #post-attachments {
 	display: grid;
 

@@ -17,7 +17,7 @@ let token = env.token;
 
 let lastStatusId: string = "";
 
-export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string) {
+export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string): Promise<mastodon.Status[]> | null {
 	let newEndpoint: string = endpoint;
 	
 	if(endpoint === Timelines.Hashtag) {
@@ -51,15 +51,21 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 		console.log("Got it!");
 		console.log(json);
 
-		return json;
+		let processedStatuses: mastodon.Status[] = [];
+
+		for(const status of json) {
+			processedStatuses.push(new mastodon.Status(status));
+		}
+
+		return processedStatuses;
 	} catch(error) {
 		console.error(error.message);
-
 		return null;
 	}
 }
 
 export async function getAccountTimeline(id: string): Promise<mastodon.Status[]> | null {
+	console.log(`Fetching account ID ${id}'s timeline from instance ${instanceUrl}...`);
 	try {
 		let response;
 
@@ -77,9 +83,17 @@ export async function getAccountTimeline(id: string): Promise<mastodon.Status[]>
 			throw new Error(`Response status: ${response.status}`);
 		}
 
-		const timeline = await response.json();
+		const json = await response.json();
+		console.log("Got it!");
+		console.log(json);
 
-		return timeline;
+		let processedStatuses: mastodon.Status[] = [];
+
+		for(const status of json) {
+			processedStatuses.push(new mastodon.Status(status));
+		}
+
+		return processedStatuses;
 	} catch(error) {
 		console.error(error.message);
 		return null;

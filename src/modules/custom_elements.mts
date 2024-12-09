@@ -242,6 +242,83 @@ export class Status extends Card {
 		super();
 	}
 
+	setStatus(status: mastodon.Status, reblog?: boolean, reblogger?: mastodon.Account) {
+		if(!this.header) {
+			setTimeout(() => {this.setStatus(status, reblog, reblogger)}, 100);
+		} else {
+			console.log(status);
+			const localProfileUrl = new URL("./user/", window.location.origin);
+			localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
+
+			if(reblog) {
+				this.header.setLabel(`🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`);
+			} else if(status.inReplyToId) {
+				this.header.setLabel("💬 reply");
+			}
+			
+			this.header.setProfileInfo(
+				status.account.avatar,
+				status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
+				parseHandle(`@${status.account.acct}`),
+				localProfileUrl
+			);
+			
+			if(status.language) {
+				this.setAttribute("lang", status.language.language);
+			} else if(this.hasAttribute("lang")) {
+				this.removeAttribute("lang");
+			}
+
+			if(status.sensitive || status.spoilerText != "") {
+				if(!(this.content instanceof StatusContentWarned)) {
+					if(this.content) {
+						this.content.remove();
+					}
+
+					this.content = new StatusContentWarned;
+					this.content.slot = "content";
+					this.appendChild(this.content);
+				}
+
+				if(status.spoilerText != "") {
+					(this.content as StatusContentWarned).setContentWarning(`⚠️ ${status.spoilerText}`);
+				}
+			} else {
+				if(this.content && this.content instanceof StatusContentWarned) {
+					this.content.remove();
+				}
+
+				this.content = new StatusContent;
+				this.content.slot = "content";
+				this.appendChild(this.content);
+			}
+
+			this.content.setContent(renderEmojis(status.content, status.emojis));
+
+			// TODO: separate these into a footer component
+			this.#postUrl.href = new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href;
+			this.#link.href = `/status/?id=${status.id}`;
+			this.#time.dateTime = status.createdAt.toISOString();
+			this.#time.innerText = getRelativeTimeString(status.createdAt);
+
+			if(status.mediaAttachments.length > 0) {
+				this.content.setAttachments(renderAttachments(status.mediaAttachments));
+			}
+
+			if(status.card != null) {
+				this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
+			} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
+				this.content.removeCard();
+			}
+		}
+	}
+
+	setStatusById(statusId: string) {
+		getStatus(statusId).then(([status, reblog, reblogger]) => {
+			this.setStatus(status, reblog, reblogger);
+		});
+	}
+
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		const header = new StatusHeader;
@@ -262,71 +339,7 @@ export class Status extends Card {
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "statusid") {
-			getStatus(newValue).then(([status, reblog, reblogger]) => {
-				const localProfileUrl = new URL("./user/", window.location.origin);
-				localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
-
-				if(reblog) {
-					this.header.setLabel(`🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`);
-				} else if(status.inReplyToId) {
-					this.header.setLabel("💬 reply");
-				}
-				
-				this.header.setProfileInfo(
-					status.account.avatar,
-					status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
-					parseHandle(`@${status.account.acct}`),
-					localProfileUrl
-				);
-				
-				if(status.language) {
-					this.setAttribute("lang", status.language.language);
-				} else if(this.hasAttribute("lang")) {
-					this.removeAttribute("lang");
-				}
-
-				if(status.sensitive || status.spoilerText != "") {
-					if(!(this.content instanceof StatusContentWarned)) {
-						if(this.content) {
-							this.content.remove();
-						}
-
-						this.content = new StatusContentWarned;
-						this.content.slot = "content";
-						this.appendChild(this.content);
-					}
-
-					if(status.spoilerText != "") {
-						(this.content as StatusContentWarned).setContentWarning(`⚠️ ${status.spoilerText}`);
-					}
-				} else {
-					if(this.content && this.content instanceof StatusContentWarned) {
-						this.content.remove();
-					}
-
-					this.content = new StatusContent;
-					this.content.slot = "content";
-					this.appendChild(this.content);
-				}
-
-				this.content.setContent(renderEmojis(status.content, status.emojis));
-
-				// TODO: separate these into a footer component
-				this.#postUrl.href = new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href;
-				this.#link.href = `/status/?id=${status.id}`;
-				this.#time.dateTime = status.createdAt.toISOString();
-				this.#time.innerText = getRelativeTimeString(status.createdAt);
-
-				if(status.mediaAttachments.length > 0) {
-					this.content.setAttachments(renderAttachments(status.mediaAttachments));
-				}
-
-				if(status.card != null) {
-					this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
-				} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
-					this.content.removeCard();
-				}
-			});
+			this.setStatusById(newValue);
 		}
 	}
 }
@@ -391,6 +404,18 @@ export class Timeline extends HTMLElement {
 		super();
 	}
 
+	setStatuses(data: mastodon.Status[]) {
+		const statuses: DocumentFragment = new DocumentFragment();
+						
+		for(const status of data) {
+			const statusElement = new Status;
+			status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
+			statuses.appendChild(statusElement);
+		}
+
+		this.shadowRoot.appendChild(statuses);
+	}
+
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, timelineStylesheet];
@@ -403,30 +428,14 @@ export class Timeline extends HTMLElement {
 				if(!(newValue == "Account" || newValue == "Hashtag")) {
 					// renderTimeline(Timelines[newValue as keyof typeof Timelines]);
 					getTimeline(instanceUrl, Timelines[newValue as keyof typeof Timelines], undefined, undefined).then((data: any) => {
-						let statuses: DocumentFragment = new DocumentFragment();
-						
-						for(const status of data) {
-							const statusElement = new Status;
-							statusElement.setAttribute("statusid", status["id"]);
-							statuses.appendChild(statusElement);
-						}
-
-						this.shadowRoot.appendChild(statuses);
+						this.setStatuses(data);
 					});
 				}
 				break;
 			case "acctid":
 				if(this.getAttribute("type") == "Account") {
 					getAccountTimeline(newValue).then((data: mastodon.Status[]) => {
-						let statuses: DocumentFragment = new DocumentFragment();
-
-						for(const status of data) {
-							const statusElement = new Status;
-							statusElement.setAttribute("statusid", status["id"]);
-							statuses.appendChild(statusElement);
-						}
-
-						this.shadowRoot.appendChild(statuses);
+						this.setStatuses(data);
 					});
 				} else {
 					console.warn("Changed account ID, but this timeline isn't set to Account.");
@@ -439,15 +448,7 @@ export class Timeline extends HTMLElement {
 					}
 
 					getTimeline(instanceUrl, Timelines.Hashtag, newValue, undefined).then((data: any) => {
-						let statuses: DocumentFragment = new DocumentFragment();
-						
-						for(const status of data) {
-							const statusElement = new Status;
-							statusElement.setAttribute("statusid", status["id"]);
-							statuses.appendChild(statusElement);
-						}
-
-						this.shadowRoot.appendChild(statuses);
+						this.setStatuses(data);
 					});
 				} else {
 					console.warn("Changed tag, but this timeline isn't set to Hashtag.");
@@ -509,13 +510,13 @@ function initComponents() {
 	initTemplates().then(() => {
 		initStylesheets().then(() => {
 			customElements.define("app-card", Card);
-			customElements.define("app-timeline", Timeline);
 			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
 			customElements.define("app-status-header", StatusHeader, {extends: "header"});
 			customElements.define("app-status-content", StatusContent);
 			customElements.define("app-status-content-warned", StatusContentWarned);
 			customElements.define("app-status", Status);
 			customElements.define("app-link-card", LinkCard);
+			customElements.define("app-timeline", Timeline);
 			customElements.define("app-nav-sidebar", NavigationSidebar);
 		});
 	});
