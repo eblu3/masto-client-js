@@ -622,6 +622,16 @@ export function getRelativeTimeString(date: Date): string {
 	}
 }
 
+export function parseHandle(handle: string): string {
+	let parsedHandle = handle;
+
+	if(parsedHandle.includes("@bsky.brid.gy")) {
+		parsedHandle += " 🦋";
+	}
+
+	return parsedHandle;
+}
+
 // window.onscroll = function(ev) {
 // 	if((window.innerHeight + Math.round(window.scrollY)) >= document.body.offsetHeight) {
 // 		renderTimeline();

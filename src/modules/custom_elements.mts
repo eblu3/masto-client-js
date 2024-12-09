@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines, getAccountTimeline} from "./masto_ts.mjs";
+import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines, getAccountTimeline, parseHandle} from "./masto_ts.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -14,6 +14,7 @@ let statusContentWarnedTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
 let linkCardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
+let navigationSidebarTemplate: DocumentFragment;
 
 export class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
@@ -261,9 +262,10 @@ export class Status extends Card {
 					this.header.setLabel("💬 reply");
 				}
 				
-				this.header.setProfileInfo(status.account.avatar,
+				this.header.setProfileInfo(
+					status.account.avatar,
 					status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
-					`@${status.account.acct}`,
+					parseHandle(`@${status.account.acct}`),
 					new URL(status.account.acct, new URL("/user/?acct=@", instanceUrl))
 				);
 				
@@ -444,6 +446,18 @@ export class Timeline extends HTMLElement {
 	}
 }
 
+export class NavigationSidebar extends HTMLElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.appendChild(navigationSidebarTemplate.cloneNode(true));
+	}
+}
+
 async function getStylesheet(url: string): Promise<CSSStyleSheet> {
 	const stylesheet = new CSSStyleSheet();
 	const response = await fetch(url);
@@ -469,6 +483,7 @@ async function initTemplates() {
 	statusTemplate = await getTemplate("/templates/status.html", "status");
 	linkCardTemplate = await getTemplate("/templates/link-card.html", "card");
 	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
+	navigationSidebarTemplate = await getTemplate("/templates/navigation.html", "sidebar");
 }
 
 async function initStylesheets() {
