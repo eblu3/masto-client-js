@@ -213,14 +213,14 @@ export class Status extends HTMLElement {
 				if(status.card != null) {
 					let cardRoot;
 
-					if(content.getElementsByTagName("app-card").length <= 0) {
-						const card = new Card;
+					if(content.getElementsByTagName("app-link-card").length <= 0) {
+						const card = new LinkCard;
 						card.slot = "card";
 						card.id = "card";
 						content.appendChild(card);
 						cardRoot = card.shadowRoot;
 					} else {
-						cardRoot = content.getElementsByTagName("app-card")[0].shadowRoot;
+						cardRoot = content.getElementsByTagName("app-link-card")[0].shadowRoot;
 					}
 
 					if(status.card.image != null) {
@@ -237,15 +237,15 @@ export class Status extends HTMLElement {
 					(cardRoot.getElementById("link") as HTMLAnchorElement).href = status.card.url.href;
 					cardRoot.getElementById("title").innerText = status.card.title;
 					cardRoot.getElementById("description").innerHTML = status.card.description;
-				} else if(content.getElementsByTagName("app-card").length > 0) {
-					content.getElementsByTagName("app-card")[0].remove;
+				} else if(content.getElementsByTagName("app-link-card").length > 0) {
+					content.getElementsByTagName("app-link-card")[0].remove;
 				}
 			});
 		}
 	}
 }
 
-export class Card extends HTMLElement {
+export class LinkCard extends HTMLElement {
 	constructor() {
 		super();
 	}
@@ -374,7 +374,7 @@ function initComponents() {
 			customElements.define("app-status-content", StatusContent);
 			customElements.define("app-status-content-warned", StatusContentWarned);
 			customElements.define("app-status", Status);
-			customElements.define("app-card", Card);
+			customElements.define("app-link-card", LinkCard);
 		});
 	});
 }
