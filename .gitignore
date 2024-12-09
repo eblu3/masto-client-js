@@ -3,3 +3,6 @@ env.*
 
 # compiled typescript files
 js/
+
+# node modules
+node_modules/

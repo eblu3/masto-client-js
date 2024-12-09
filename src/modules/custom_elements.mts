@@ -152,6 +152,8 @@ export class Status extends HTMLElement {
 
 				if(reblog) {
 					headerRoot.getElementById("label").innerHTML = `🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`
+				} else if(status.inReplyToId) {
+					headerRoot.getElementById("label").innerHTML = "💬 reply";
 				}
 				
 				headerRoot.getElementById("avatar").setAttribute("src", status.account.avatar.href);
@@ -211,14 +213,14 @@ export class Status extends HTMLElement {
 				if(status.card != null) {
 					let cardRoot;
 
-					if(content.shadowRoot.getElementById("card") == null) {
+					if(content.getElementsByTagName("app-card").length <= 0) {
 						const card = new Card;
 						card.slot = "card";
 						card.id = "card";
-						content.shadowRoot.appendChild(card);
+						content.appendChild(card);
 						cardRoot = card.shadowRoot;
 					} else {
-						cardRoot = content.shadowRoot.getElementById("card").shadowRoot;
+						cardRoot = content.getElementsByTagName("app-card")[0].shadowRoot;
 					}
 
 					if(status.card.image != null) {
@@ -235,8 +237,8 @@ export class Status extends HTMLElement {
 					(cardRoot.getElementById("link") as HTMLAnchorElement).href = status.card.url.href;
 					cardRoot.getElementById("title").innerText = status.card.title;
 					cardRoot.getElementById("description").innerHTML = status.card.description;
-				} else if(content.shadowRoot.getElementById("card") != null) {
-					content.shadowRoot.getElementById("card").remove;
+				} else if(content.getElementsByTagName("app-card").length > 0) {
+					content.getElementsByTagName("app-card")[0].remove;
 				}
 			});
 		}

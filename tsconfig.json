@@ -1,8 +1,9 @@
 {
 	"compilerOptions": {
 		"lib": ["ESNext", "DOM"],
-		"module": "ESNext",
-		"target": "ES6",
+		"module": "NodeNext",
+		"moduleResolution": "nodenext",
+		"target": "ES2017",
 		"noImplicitAny": true,
 		"removeComments": true,
 		"preserveConstEnums": true,
@@ -11,7 +12,7 @@
 		"rootDir": "src",
 		"outDir": "js"
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "src/modules/blurhash/declarations.d.ts"],
 	"exclude": ["src/env.mjs"]
 	// "files": [
 	// 	"src/test.mts",

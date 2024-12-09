@@ -15,6 +15,7 @@ address {
 
 	width: calc(100% + 2em);
 	min-height: 8em;
+	max-height: 25vh;
 	aspect-ratio: 3 / 1;
 
 	background-size: cover;
@@ -30,7 +31,7 @@ address {
 	margin-top: max(calc((20vw / 2) * -1), -4em);
 	
 	width: 100%;
-	max-width: 1024px;
+	max-width: var(--max-item-width);
 
 	flex-basis: 50%;
 	flex-grow: 1;

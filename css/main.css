@@ -52,6 +52,8 @@ body > header {
 	background-color: var(--background-color);
 
 	border-bottom: 1px solid var(--accent-color);
+
+	z-index: 99;
 }
 
 main {

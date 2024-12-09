@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "blurhash": "^2.0.5",
+    "esbuild": "0.24.0",
+    "typescript": "^5.7.2"
+  },
+  "scripts": {
+    "build": "esbuild src/test.mts --bundle --outfile=test/js/out.mjs"
+  }
+}
