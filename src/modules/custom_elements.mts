@@ -149,8 +149,8 @@ export class StatusHeader extends HTMLElement {
 }
 
 export class StatusContent extends HTMLElement {
-	#postContent: HTMLDivElement;
-	#attachmentContainer: HTMLDivElement;
+	postContent: HTMLDivElement;
+	attachmentContainer: HTMLDivElement;
 	#card: LinkCard;
 
 	constructor() {
@@ -158,8 +158,8 @@ export class StatusContent extends HTMLElement {
 	}
 
 	setContent(content: string) {
-		if(this.#postContent) {
-			this.#postContent.innerHTML = content;
+		if(this.postContent) {
+			this.postContent.innerHTML = content;
 		} else {
 			console.error(`post content element on ${this} doesn't exist!`);
 		}
@@ -167,7 +167,7 @@ export class StatusContent extends HTMLElement {
 
 	setAttachments(attachments: HTMLElement[]) {
 		for(const attachment of attachments) {
-			this.#attachmentContainer.appendChild(attachment);
+			this.attachmentContainer.appendChild(attachment);
 		}
 	}
 
@@ -200,8 +200,8 @@ export class StatusContent extends HTMLElement {
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 		shadow.appendChild(statusContentTemplate.cloneNode(true));
 
-		this.#postContent = shadow.getElementById("post-content") as HTMLDivElement;
-		this.#attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
+		this.postContent = shadow.getElementById("post-content") as HTMLDivElement;
+		this.attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
 	}
 }
 
@@ -221,6 +221,8 @@ export class StatusContentWarned extends StatusContent {
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 		shadow.appendChild(statusContentWarnedTemplate.cloneNode(true));
 
+		this.postContent = shadow.getElementById("post-content") as HTMLDivElement;
+		this.attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
 		this.#contentWarning = shadow.getElementById("cw");
 	}
 }
