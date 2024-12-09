@@ -22,13 +22,35 @@
 	--header-height: 5em;
 }
 
+@media (max-width: 1023px) {
+	body {
+		grid-template-areas:
+			"header"
+			"main";
+		grid-template-rows: var(--header-height) 1fr;
+	}
+
+	app-nav-sidebar {
+		display: none;
+	}
+}
+
+@media (min-width: 1024px) {
+	body {
+		grid-template-areas:
+			"sidebar header"
+			"sidebar main";
+		grid-template-columns: var(--sidebar-width) 1fr;
+	}
+
+	app-nav-sidebar {
+		display: block;
+	}
+}
+
 body {
 	display: grid;
-	grid-template-areas:
-		"sidebar header"
-		"sidebar main";
 	grid-template-rows: var(--header-height) 1fr;
-	grid-template-columns: var(--sidebar-width) 1fr;
 
 	margin: 0;
 	overflow: hidden;
@@ -82,8 +104,6 @@ body > header {
 
 app-nav-sidebar {
 	grid-area: sidebar;
-
-	display: block;
 
 	width: var(--sidebar-width);
 	height: 100vh;
