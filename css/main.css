@@ -61,7 +61,7 @@ body {
 	background-color: var(--background-color);
 	color: var(--foreground-color);
 
-	font-family: sans-serif;
+	font-family: system-ui, sans-serif;
 }
 
 main {
