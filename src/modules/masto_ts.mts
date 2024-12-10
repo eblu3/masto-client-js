@@ -64,19 +64,31 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 	}
 }
 
-export async function getAccountTimeline(id: string): Promise<mastodon.Status[]> | null {
+export async function getAccountTimeline(id: string, startAtId?: string): Promise<mastodon.Status[]> | null {
 	console.log(`Fetching account ID ${id}'s timeline from instance ${instanceUrl}...`);
 	try {
 		let response;
 
 		if(token) {
-			response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl), {
-				headers: {
-					"Authorization": `Bearer ${token}`
-				}
-			});
+			if(startAtId) {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, instanceUrl), {
+					headers: {
+						"Authorization": `Bearer ${token}`
+					}
+				});
+			} else {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl), {
+					headers: {
+						"Authorization": `Bearer ${token}`
+					}
+				});
+			}
 		} else {
-			response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl));
+			if(startAtId) {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, instanceUrl));
+			} else {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl));
+			}
 		}
 
 		if(!response.ok) {

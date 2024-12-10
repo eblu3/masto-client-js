@@ -458,6 +458,10 @@ export class LinkCard extends HTMLElement {
 
 export class Timeline extends HTMLElement {
 	static observedAttributes = ["type", "tag", "acctid"];
+
+	#loadMoreButton: HTMLButtonElement;
+	
+	#lastPostId: string;
 	
 	constructor() {
 		super();
@@ -470,7 +474,7 @@ export class Timeline extends HTMLElement {
 		this.shadowRoot.prepend(statusElement);
 	}
 
-	setStatuses(data: mastodon.Status[]) {
+	addStatuses(data: mastodon.Status[]) {
 		const statuses: DocumentFragment = new DocumentFragment();
 						
 		for(const status of data) {
@@ -479,13 +483,28 @@ export class Timeline extends HTMLElement {
 			statuses.appendChild(statusElement);
 		}
 
-		this.shadowRoot.appendChild(statuses);
+		this.#lastPostId = data[data.length - 1].id;
+
+		this.shadowRoot.insertBefore(statuses, this.#loadMoreButton);
 	}
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, timelineStylesheet];
 		shadow.appendChild(timelineTemplate.cloneNode(true));
+
+		this.#loadMoreButton = shadow.getElementById("load-more-button") as HTMLButtonElement;
+		this.#loadMoreButton.addEventListener("click", (event) => {
+			const currentTimeline = this.getAttribute("type");
+
+			if(!(currentTimeline == "Account" || currentTimeline == "Hashtag")) {
+				getTimeline(instanceUrl, Timelines[currentTimeline as keyof typeof Timelines], undefined, this.#lastPostId).then((data) => this.addStatuses(data));
+			} else if(currentTimeline == "Account") {
+				getAccountTimeline(this.getAttribute("acctid"), this.#lastPostId).then((data) => this.addStatuses(data));
+			} else if(currentTimeline == "Hashtag") {
+				getTimeline(instanceUrl, Timelines.Hashtag, this.getAttribute("tag"), this.#lastPostId).then((data) => this.addStatuses(data));
+			}
+		});
 
 		document.addEventListener("postsent", (event) => {
 			this.prependStatus((event as CustomEvent).detail.status);
@@ -497,14 +516,14 @@ export class Timeline extends HTMLElement {
 			case "type":
 				if(!(newValue == "Account" || newValue == "Hashtag")) {
 					getTimeline(instanceUrl, Timelines[newValue as keyof typeof Timelines], undefined, undefined).then((data: any) => {
-						this.setStatuses(data);
+						this.addStatuses(data);
 					});
 				}
 				break;
 			case "acctid":
 				if(this.getAttribute("type") == "Account") {
 					getAccountTimeline(newValue).then((data: mastodon.Status[]) => {
-						this.setStatuses(data);
+						this.addStatuses(data);
 					});
 				} else {
 					console.warn("Changed account ID, but this timeline isn't set to Account.");
@@ -513,11 +532,11 @@ export class Timeline extends HTMLElement {
 			case "tag":
 				if(this.getAttribute("type") == "Hashtag") {
 					if(this.shadowRoot) {
-						this.shadowRoot.innerHTML = "";
+						this.shadowRoot.replaceChildren(this.#loadMoreButton);
 					}
 
 					getTimeline(instanceUrl, Timelines.Hashtag, newValue, undefined).then((data: any) => {
-						this.setStatuses(data);
+						this.addStatuses(data);
 					});
 				} else {
 					console.warn("Changed tag, but this timeline isn't set to Hashtag.");
