@@ -8,6 +8,7 @@ let linkCardStylesheet: CSSStyleSheet;
 let timelineStylesheet: CSSStyleSheet;
 let navigationStylesheet: CSSStyleSheet;
 
+let profileHeaderTemplate: DocumentFragment;
 let cardTemplate: DocumentFragment;
 let statusHeaderTemplate: DocumentFragment;
 let statusContentTemplate: DocumentFragment;
@@ -19,68 +20,45 @@ let navigationSidebarTemplate: DocumentFragment;
 
 export class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
+
+	#container: HTMLElement;
+	#avatar: HTMLImageElement;
+	#displayName: HTMLHeadingElement;
+	#handle: HTMLParagraphElement;
+	#bio: HTMLParagraphElement;
 	
 	constructor() {
 		super();
 	}
 
-	#buildElement(shadowRoot: ShadowRoot) {
-		const container = document.createElement("address");
-		const header = document.createElement("div");
-		const infoContainer = document.createElement("div");
-		const avatar = document.createElement("img");
-		const displayName = document.createElement("h1");
-		const handle = document.createElement("p");
-		const bio = document.createElement("p");
-
-		container.id = "container";
-
-		header.id = "header";
-
-		infoContainer.id = "info-container";
-
-		avatar.id = "avatar";
-
-		displayName.id = "display-name";
-		displayName.className = "display-name";
-
-		handle.id = "handle";
-
-		bio.id = "bio";
-
-		infoContainer.appendChild(avatar);
-		infoContainer.appendChild(displayName);
-		infoContainer.appendChild(handle);
-		infoContainer.appendChild(bio);
-				
-		container.appendChild(header);
-		container.appendChild(infoContainer);
-		shadowRoot.appendChild(container);
-	}
-
-	#genElement(account: mastodon.Account, shadowRoot: ShadowRoot) {
-		shadowRoot.getElementById("container").style.setProperty("--header-url", `url(${account.header.href})`);
-		shadowRoot.getElementById("avatar").setAttribute("src", account.avatar.href);
-		shadowRoot.getElementById("display-name").innerHTML = renderEmojis(account.displayName, account.emojis);
-		shadowRoot.getElementById("handle").innerText = `@${account.acct}`;
-		shadowRoot.getElementById("bio").innerHTML = renderEmojis(account.note, account.emojis);
+	setAccount(account: mastodon.Account) {
+		this.#container.style.setProperty("--header-url", `url(${account.header.href})`);
+		this.#avatar.src = account.avatar.href;
+		this.#displayName.innerHTML = renderEmojis(account.displayName, account.emojis);
+		this.#handle.innerText = `@${account.acct}`;
+		this.#bio.innerHTML = renderEmojis(account.note, account.emojis);
 	}
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, profileHeaderStylesheet];
+		shadow.appendChild(profileHeaderTemplate.cloneNode(true));
 
-		this.#buildElement(shadow);
+		this.#container = shadow.getElementById("container");
+		this.#avatar = shadow.getElementById("avatar") as HTMLImageElement;
+		this.#displayName = shadow.getElementById("display-name") as HTMLHeadingElement;
+		this.#handle = shadow.getElementById("handle") as HTMLParagraphElement;
+		this.#bio = shadow.getElementById("bio") as HTMLParagraphElement;
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "acctid") {
 			getAccount(newValue).then((account) => {
-				this.#genElement(account, this.shadowRoot);
+				this.setAccount(account);
 			});
 		} else if(name == "acct") {
 			getAccountByHandle(newValue).then((account) => {
-				this.#genElement(account, this.shadowRoot);
+				this.setAccount(account);
 			});
 		}
 	}
@@ -487,6 +465,7 @@ async function getTemplate(url: string, templateId: string): Promise<DocumentFra
 }
 
 async function initTemplates() {
+	profileHeaderTemplate = await getTemplate("/templates/profile.html", "header");
 	cardTemplate = await getTemplate("/templates/card.html", "card");
 	statusHeaderTemplate = await getTemplate("/templates/status.html", "header");
 	statusContentTemplate = await getTemplate("/templates/status.html", "content");
