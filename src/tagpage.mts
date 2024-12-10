@@ -1,5 +1,3 @@
-import { setTimeline, Timelines, setTag, renderTimeline, resetLastStatus } from "./modules/masto_ts.mjs";
-
 const tagToSearch = new URLSearchParams(document.location.search).get("tag");
 
 document.title = `#${tagToSearch}`;
