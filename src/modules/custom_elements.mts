@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines, getAccountTimeline, parseHandle} from "./masto_ts.mjs";
+import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines, getAccountTimeline, parseHandle, charLimit, postStatus} from "./masto_ts.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -17,6 +17,7 @@ let statusTemplate: DocumentFragment;
 let linkCardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
 let navigationSidebarTemplate: DocumentFragment;
+let postBoxTemplate: DocumentFragment;
 
 export class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
@@ -447,6 +448,52 @@ export class NavigationSidebar extends HTMLElement {
 	}
 }
 
+export class PostBox extends Card {
+	#postInput: HTMLTextAreaElement;
+	#characterCounter: HTMLParagraphElement;
+	#postButton: HTMLButtonElement;
+
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.appendChild(postBoxTemplate.cloneNode(true));
+
+		this.#postInput = shadow.getElementById("post-input") as HTMLTextAreaElement;
+		this.#characterCounter = shadow.getElementById("character-counter") as HTMLParagraphElement;
+		this.#postButton = shadow.getElementById("post-button") as HTMLButtonElement;
+
+		this.#postInput.style.height = `${this.#postInput.scrollHeight}px`;
+		this.#characterCounter.innerText = `${this.#postInput.value.length}/${charLimit}`;
+
+		this.#postInput.addEventListener("input", (event) => {
+			const target = event.target as HTMLTextAreaElement;
+
+			target.style.height = "auto";
+			target.style.height = `${target.scrollHeight}px`;
+
+			this.#characterCounter.innerText = `${target.value.length}/${charLimit}`;
+
+			if(target.value === "" || target.value.length > charLimit) {
+				this.#postButton.disabled = true;
+			} else {
+				this.#postButton.disabled = false;
+			}
+		});
+
+		this.#postButton.addEventListener("click", (event) => {
+			const target = event.target as HTMLButtonElement
+			postStatus(this.#postInput.value).then((status) => {
+				this.#postInput.value = "";
+				target.disabled = true;
+			});
+		});
+	}
+}
+
 async function getStylesheet(url: string): Promise<CSSStyleSheet> {
 	const stylesheet = new CSSStyleSheet();
 	const response = await fetch(url);
@@ -474,6 +521,7 @@ async function initTemplates() {
 	linkCardTemplate = await getTemplate("/templates/link-card.html", "card");
 	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
 	navigationSidebarTemplate = await getTemplate("/templates/navigation.html", "sidebar");
+	postBoxTemplate = await getTemplate("/templates/post.html", "postbox");
 }
 
 async function initStylesheets() {
@@ -497,6 +545,7 @@ function initComponents() {
 			customElements.define("app-link-card", LinkCard);
 			customElements.define("app-timeline", Timeline);
 			customElements.define("app-nav-sidebar", NavigationSidebar);
+			customElements.define("app-post-box", PostBox);
 		});
 	});
 }

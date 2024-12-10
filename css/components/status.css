@@ -24,6 +24,10 @@ address {
 	margin-bottom: 1em;
 }
 
+#label {
+	margin-top: 0;
+}
+
 #account-info {
 	align-self: center;
 }
