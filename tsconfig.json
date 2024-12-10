@@ -14,17 +14,4 @@
 	},
 	"include": ["src/**/*", "src/modules/blurhash/declarations.d.ts"],
 	"exclude": ["src/env.mjs"]
-	// "files": [
-	// 	"src/test.mts",
-	// 	"src/modules/custom_elements.mts",
-	// 	"src/modules/mastodon.mts",
-	// 	"src/modules/includes.mts",
-	// 	"src/modules/masto_ts.mts",
-	// 	"src/common.mts",
-	// 	"homepage.mts",
-	// 	"publictimelinepage.mts",
-	// 	"tagpage.mts",
-	// 	"accountpage.mts",
-	// 	"statuspage.mts"
-	// ]
 }
