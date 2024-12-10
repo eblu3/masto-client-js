@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, Timelines, getAccountTimeline, parseHandle, charLimit, postStatus, boostStatus, getLoggedInAccount} from "./masto_ts.mjs";
+import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, Timelines, getAccountTimeline, parseHandle, charLimit, postStatus, favoriteStatus, unfavoriteStatus, boostStatus, unboostStatus, getLoggedInAccount} from "./masto_ts.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -165,13 +165,25 @@ export class StatusFooter extends HTMLElement {
 		}
 	}
 
-	setStatusInfo(id: string, ableToBoost?: boolean, boosted?: boolean) {
+	setFaved(faved: boolean) {
+		this.#faved = faved;
+		if(faved) {
+			this.#favoriteButton.innerText = "Favorited!";
+		} else {
+			this.#favoriteButton.innerText = "Favorite";
+		}
+	}
+
+	setStatusInfo(id: string, ableToBoost?: boolean, boosted?: boolean, favorited?: boolean) {
 		this.setStatusId(id);
 		if(ableToBoost != undefined) {
 			this.setAbleToBoost(ableToBoost);
 		}
 		if(boosted != undefined) {
 			this.setBoosted(boosted);
+		}
+		if(favorited != undefined) {
+			this.setFaved(favorited);
 		}
 	}
 
@@ -187,11 +199,22 @@ export class StatusFooter extends HTMLElement {
 		this.#boostButton.addEventListener("click", (event) => {
 			if(this.#statusId) {
 				if(this.#boosted) {
-
+					unboostStatus(this.#statusId).then(() => this.setBoosted(false));
 				} else {
 					boostStatus(this.#statusId).then((status) => {
-						console.debug(status);
 						this.setBoosted(true);
+					});
+				}
+			}
+		});
+
+		this.#favoriteButton.addEventListener("click", (event) => {
+			if(this.#statusId) {
+				if(this.#faved) {
+					unfavoriteStatus(this.#statusId).then(() => this.setFaved(false));
+				} else {
+					favoriteStatus(this.#statusId).then((status) => {
+						this.setFaved(true);
 					});
 				}
 			}
@@ -316,7 +339,7 @@ export class Status extends Card {
 				localProfileUrl
 			);
 
-			this.footer.setStatusInfo(status.id, undefined, status.reblogged);
+			this.footer.setStatusInfo(status.id, undefined, status.reblogged, status.favourited);
 			
 			if(status.language) {
 				this.setAttribute("lang", status.language.language);

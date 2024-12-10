@@ -248,6 +248,52 @@ export async function postStatus(
 	}
 }
 
+export async function favoriteStatus(id: string): Promise<mastodon.Status> | null {
+	console.log(`Favoriting status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/favourite`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status favorited!");
+		
+		return new mastodon.Status(await response.json());
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function unfavoriteStatus(id: string): Promise<mastodon.Status> | null {
+	console.log(`Removing favorite from status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/unfavourite`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status unfavorited!");
+		
+		return new mastodon.Status(await response.json());
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
 // TODO: change visibility to enum and implement it
 export async function boostStatus(id: string, visibility?: string): Promise<mastodon.Status> | null {
 	console.log(`Boosting status ${id}...`);
@@ -264,6 +310,29 @@ export async function boostStatus(id: string, visibility?: string): Promise<mast
 		}
 
 		console.log("Status boosted!");
+		
+		return new mastodon.Status(await response.json());
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function unboostStatus(id: String): Promise<mastodon.Status> | null {
+	console.log(`Removing boost from status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/unreblog`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status unboosted!");
 		
 		return new mastodon.Status(await response.json());
 	} catch(error) {
