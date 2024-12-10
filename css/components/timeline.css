@@ -8,8 +8,8 @@ app-status {
 	transition: transform cubic-bezier(0,0,0,1) 0.125s;
 }
 
-@media(min-width: 1024px) {
+/* @media(min-width: 1024px) {
 	app-status:focus, app-status:focus-within {
 		transform: scale(1.05);
 	}
-}
+} */

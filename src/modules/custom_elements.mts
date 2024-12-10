@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, renderTimeline, renderAccountTimeline, Timelines, getAccountTimeline, parseHandle, charLimit, postStatus} from "./masto_ts.mjs";
+import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, Timelines, getAccountTimeline, parseHandle, charLimit, postStatus, boostStatus, getLoggedInAccount} from "./masto_ts.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -12,6 +12,7 @@ let postBoxStylesheet: CSSStyleSheet;
 let profileHeaderTemplate: DocumentFragment;
 let cardTemplate: DocumentFragment;
 let statusHeaderTemplate: DocumentFragment;
+let statusFooterTemplate: DocumentFragment;
 let statusContentTemplate: DocumentFragment;
 let statusContentWarnedTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
@@ -19,6 +20,10 @@ let linkCardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
 let navigationSidebarTemplate: DocumentFragment;
 let postBoxTemplate: DocumentFragment;
+
+let postSentEventDispatcher: HTMLElement;
+let postSentEventStatus: mastodon.Status;
+let postSentEvent: CustomEvent;
 
 export class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
@@ -129,6 +134,71 @@ export class StatusHeader extends HTMLElement {
 	}
 }
 
+export class StatusFooter extends HTMLElement {
+	#replyButton: HTMLButtonElement;
+	#boostButton: HTMLButtonElement;
+	#favoriteButton: HTMLButtonElement;
+
+	#statusId: string;
+	#ableToBoost: boolean;
+	#boosted: boolean;
+	#faved: boolean;
+	
+	constructor() {
+		super();
+	}
+
+	setStatusId(id: string) {
+		this.#statusId = id;
+	}
+
+	setAbleToBoost(able: boolean) {
+		this.#ableToBoost = able;
+	}
+
+	setBoosted(boosted: boolean) {
+		this.#boosted = boosted;
+		if(boosted) {
+			this.#boostButton.innerText = "Boosted!";
+		} else {
+			this.#boostButton.innerText = "Boost";
+		}
+	}
+
+	setStatusInfo(id: string, ableToBoost?: boolean, boosted?: boolean) {
+		this.setStatusId(id);
+		if(ableToBoost != undefined) {
+			this.setAbleToBoost(ableToBoost);
+		}
+		if(boosted != undefined) {
+			this.setBoosted(boosted);
+		}
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
+		shadow.appendChild(statusFooterTemplate.cloneNode(true));
+
+		this.#replyButton = shadow.getElementById("reply-button") as HTMLButtonElement;
+		this.#boostButton = shadow.getElementById("boost-button") as HTMLButtonElement;
+		this.#favoriteButton = shadow.getElementById("favorite-button") as HTMLButtonElement;
+
+		this.#boostButton.addEventListener("click", (event) => {
+			if(this.#statusId) {
+				if(this.#boosted) {
+
+				} else {
+					boostStatus(this.#statusId).then((status) => {
+						console.debug(status);
+						this.setBoosted(true);
+					});
+				}
+			}
+		});
+	}
+}
+
 export class StatusContent extends HTMLElement {
 	postContent: HTMLDivElement;
 	attachmentContainer: HTMLDivElement;
@@ -212,6 +282,7 @@ export class Status extends Card {
 	static observedAttributes = ["statusid", "sensitive", "spoilertext"];
 
 	header: StatusHeader;
+	footer: StatusFooter;
 	content: StatusContent;
 
 	#link: HTMLAnchorElement;
@@ -223,7 +294,7 @@ export class Status extends Card {
 	}
 
 	setStatus(status: mastodon.Status, reblog?: boolean, reblogger?: mastodon.Account) {
-		if(!this.header) {
+		if(!(this.header && this.footer)) {
 			setTimeout(() => {this.setStatus(status, reblog, reblogger)}, 100);
 		} else {
 			console.log(status);
@@ -244,6 +315,8 @@ export class Status extends Card {
 				parseHandle(`@${status.account.acct}`),
 				localProfileUrl
 			);
+
+			this.footer.setStatusInfo(status.id, undefined, status.reblogged);
 			
 			if(status.language) {
 				this.setAttribute("lang", status.language.language);
@@ -304,15 +377,19 @@ export class Status extends Card {
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		const header = new StatusHeader;
+		const footer = new StatusFooter;
 
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 
 		header.slot = "header";
+		footer.slot = "footer";
 
 		shadow.appendChild(statusTemplate.cloneNode(true));
 		this.appendChild(header);
+		this.appendChild(footer);
 
 		this.header = header;
+		this.footer = footer;
 
 		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
 		this.#time = shadow.getElementById("time") as HTMLTimeElement;
@@ -386,6 +463,13 @@ export class Timeline extends HTMLElement {
 		super();
 	}
 
+	prependStatus(status: mastodon.Status) {
+		console.log("bleh");
+		const statusElement = new Status;
+		status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
+		this.shadowRoot.prepend(statusElement);
+	}
+
 	setStatuses(data: mastodon.Status[]) {
 		const statuses: DocumentFragment = new DocumentFragment();
 						
@@ -402,13 +486,16 @@ export class Timeline extends HTMLElement {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, timelineStylesheet];
 		shadow.appendChild(timelineTemplate.cloneNode(true));
+
+		document.addEventListener("postsent", (event) => {
+			this.prependStatus((event as CustomEvent).detail.status);
+		});
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		switch(name) {
 			case "type":
 				if(!(newValue == "Account" || newValue == "Hashtag")) {
-					// renderTimeline(Timelines[newValue as keyof typeof Timelines]);
 					getTimeline(instanceUrl, Timelines[newValue as keyof typeof Timelines], undefined, undefined).then((data: any) => {
 						this.setStatuses(data);
 					});
@@ -440,6 +527,8 @@ export class Timeline extends HTMLElement {
 }
 
 export class NavigationSidebar extends HTMLElement {
+	#youLink: HTMLAnchorElement;
+	
 	constructor() {
 		super();
 	}
@@ -448,6 +537,12 @@ export class NavigationSidebar extends HTMLElement {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, navigationStylesheet];
 		shadow.appendChild(navigationSidebarTemplate.cloneNode(true));
+
+		this.#youLink = shadow.getElementById("you-link") as HTMLAnchorElement;
+		
+		getLoggedInAccount().then((account) => {
+			this.#youLink.href = `/user/?acct=@${account.acct}`;
+		})
 	}
 }
 
@@ -499,6 +594,11 @@ export class PostBox extends Card {
 		this.#postButton.addEventListener("click", (event) => {
 			const target = event.target as HTMLButtonElement
 			postStatus(this.#postInput.value).then((status) => {
+				postSentEvent = new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
+					status: status
+				}})
+				document.dispatchEvent(postSentEvent);
+
 				this.#postInput.value = "";
 				target.disabled = true;
 				this.#characterCounter.innerText = `0/${charLimit}`;
@@ -531,6 +631,7 @@ async function initTemplates() {
 	profileHeaderTemplate = await getTemplate("/templates/profile.html", "header");
 	cardTemplate = await getTemplate("/templates/card.html", "card");
 	statusHeaderTemplate = await getTemplate("/templates/status.html", "header");
+	statusFooterTemplate = await getTemplate("/templates/status.html", "footer");
 	statusContentTemplate = await getTemplate("/templates/status.html", "content");
 	statusContentWarnedTemplate = await getTemplate("/templates/status.html", "content-cw");
 	statusTemplate = await getTemplate("/templates/status.html", "status");
@@ -556,6 +657,7 @@ function initComponents() {
 			customElements.define("app-card", Card);
 			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
 			customElements.define("app-status-header", StatusHeader, {extends: "header"});
+			customElements.define("app-status-footer", StatusFooter, {extends: "footer"});
 			customElements.define("app-status-content", StatusContent);
 			customElements.define("app-status-content-warned", StatusContentWarned);
 			customElements.define("app-status", Status);

@@ -181,6 +181,25 @@ export async function getAccountByHandle(acct: string) {
 	}
 }
 
+export async function getLoggedInAccount(): Promise<mastodon.CredentialAccount> | null {
+	try {
+		let response = await fetch(new URL("/api/v1/accounts/verify_credentials", instanceUrl), {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		return new mastodon.CredentialAccount(await response.json());
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
 export async function postStatus(
 	status?: string,
 	mediaIds?: string[],
@@ -211,6 +230,30 @@ export async function postStatus(
 		const postedStatus = new mastodon.Status(await response.json());
 
 		return postedStatus;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+// TODO: change visibility to enum and implement it
+export async function boostStatus(id: string, visibility?: string): Promise<mastodon.Status> | null {
+	console.log(`Boosting status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/reblog`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status boosted!");
+		
+		return new mastodon.Status(await response.json());
 	} catch(error) {
 		console.error(error.message);
 		return null;
@@ -320,280 +363,6 @@ function removeTrailingLink(postContent: string): string {
 	}
 
 	return processedPostContent.documentElement.innerHTML;
-}
-
-function renderStatusAccountInfo(account: mastodon.Account): HTMLElement {
-	let out = document.createElement("address");
-
-	const avatar = document.createElement("img");
-	const infoContainer = document.createElement("div");
-	const displayName = document.createElement("span");
-	const handle = document.createElement("span");
-
-	avatar.setAttribute("class", "avatar");
-	avatar.setAttribute("src", account.avatar.toString());
-
-	displayName.setAttribute("class", "display-name");
-	if(account.displayName) {
-		displayName.innerHTML = `<a href=\"/user/?acct=${account.acct}\">${renderEmojis(account.displayName, account.emojis)}</a>`;
-	} else {
-		displayName.innerHTML = `<a href=\"/user/?acct=${account.acct}\">${account.username}</a>`;
-	}
-
-	handle.setAttribute("class", "account-handle");
-	handle.innerText = `@${account.acct}`;
-
-	infoContainer.appendChild(displayName);
-	infoContainer.appendChild(document.createElement("br"));
-	infoContainer.appendChild(handle);
-	
-	out.appendChild(avatar);
-	out.appendChild(infoContainer);
-
-	return out;
-}
-
-function renderCard(card: mastodon.PreviewCard): HTMLElement {
-	let out = document.createElement("a");
-
-	let cardContainer = document.createElement("div");
-	let cardTitle = document.createElement("h2");
-	let cardDesc = document.createElement("p");
-
-	out.setAttribute("href", card.url.toString());
-
-	cardContainer.setAttribute("class", "embed-card");
-	
-	if(card.image != null) {
-		let cardImage = document.createElement("img");
-		cardImage.setAttribute("src", card.image.toString());
-		cardImage.setAttribute("width", card.width.toString());
-		cardImage.setAttribute("height", card.height.toString());
-		cardContainer.appendChild(cardImage);
-	}
-
-	cardTitle.innerText = card.title;
-
-	cardDesc.innerText = card.description;
-
-	cardContainer.appendChild(cardTitle);
-	cardContainer.appendChild(cardDesc);
-
-	out.appendChild(cardContainer);
-
-	return out;
-}
-
-function renderProfileInfo(account: mastodon.Account): HTMLElement {
-	let out = document.createElement("div");
-
-	out.setAttribute("class", "profile-info");
-	out.style.backgroundImage = `url(\"${account.header.href}\"`;
-
-	let avatar = document.createElement("img");
-
-	avatar.setAttribute("class", "avatar");
-	avatar.setAttribute("src", account.avatar.href);
-
-	out.appendChild(avatar);
-
-	return out;
-}
-
-export function renderStatus(status: mastodon.Status, label?: HTMLElement): HTMLElement {
-	if(status.reblog) {
-		let label = document.createElement("p");
-
-		label.setAttribute("class", "label");
-
-		label.innerHTML = `🔁 <span class=\"display-name\">${renderEmojis(status.account.displayName, status.account.emojis)}</span> boosted`;
-
-		return renderStatus(status.reblog, label=label);
-	}
-	
-	let nodeList = new DOMParser().parseFromString(status.content, "text/html").body.childNodes;
-	let parsedContent: HTMLElement[] = [];
-	let out = document.createElement("article");
-
-	nodeList.forEach((node) => {
-		if(node.nodeType == Node.ELEMENT_NODE) {
-			parsedContent.push((node as HTMLElement));
-		} else if(node.nodeType == Node.TEXT_NODE) {
-			const paragraphElement = document.createElement("p");
-			paragraphElement.innerText = node.nodeValue;
-			parsedContent.push(paragraphElement);
-		}
-	});
-
-	for(const element of parsedContent) {
-		element.innerHTML = renderEmojis(element.innerHTML, status.emojis);
-	}
-
-	if(status.language) {
-		out.setAttribute("lang", status.language.language);
-	}
-
-	if(label) {
-		out.appendChild(label);
-	}
-
-	out.appendChild(renderStatusAccountInfo(status.account));
-
-	if(status.sensitive || status.spoilerText != "") {
-		const details = document.createElement("details");
-		const summary = document.createElement("summary");
-
-		summary.setAttribute("class", "content-warning");
-
-		if(status.spoilerText != "") {
-			summary.innerText = `⚠️ ${status.spoilerText}`;
-		} else {
-			summary.innerText = "⚠️ Sensitive content";
-		}
-
-		details.appendChild(summary);
-		// if(status.card != null) {
-		// 	details.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
-		// } else {
-			for(const element of parsedContent) {
-				details.appendChild(element);
-			}
-		// }
-
-		if(status.mediaAttachments.length > 0) {
-			for(const attachment of renderAttachments(status.mediaAttachments)) {
-				details.appendChild(attachment);
-			}
-		}
-
-		if(status.card != null) {
-			details.appendChild(renderCard(status.card));
-		}
-
-		out.appendChild(details);
-	} else {
-		// if(status.card != null) {
-		// 	out.innerHTML += removeTrailingLink(renderEmojis(status.content, status.emojis));
-		// } else {
-			for(const element of parsedContent) {
-				out.appendChild(element);
-			}
-		// }
-
-		if(status.mediaAttachments.length > 0) {
-			for(const attachment of renderAttachments(status.mediaAttachments)) {
-				out.appendChild(attachment);
-			}
-		}
-
-		if(status.card != null) {
-			out.appendChild(renderCard(status.card));
-		}
-	}
-
-	const statusTimeContainer = document.createElement("p");
-	const statusLink = document.createElement("a");
-	const statusTime = document.createElement("time");
-
-	const rtf = new Intl.RelativeTimeFormat(undefined, {
-		numeric: "auto"
-	});
-	const timeSincePost = (status.createdAt.getTime() - Date.now()) / 1000;
-
-	statusTimeContainer.setAttribute("class", "time-container");
-
-	statusLink.setAttribute("href", `/status/?id=${status.id}`);
-
-	statusTime.setAttribute("datetime", status.createdAt.toISOString());
-
-	switch(true) {
-		case timeSincePost <= -604800:
-			statusTime.innerText = status.createdAt.toLocaleString();
-			break;
-		case timeSincePost <= -86400:
-			statusTime.innerText = rtf.format(Math.floor(timeSincePost / 86400), "days") + ` (${status.createdAt.toLocaleString()})`;
-			break;
-		case timeSincePost <= -3600:
-			statusTime.innerText = rtf.format(Math.floor(timeSincePost / 3600), "hours") + ` (${status.createdAt.toLocaleString()})`;
-			break;
-		case timeSincePost <= -60:
-			statusTime.innerText = rtf.format(Math.floor(timeSincePost / 60), "minutes") + ` (${status.createdAt.toLocaleString()})`;
-			break;
-		case timeSincePost <= -1:
-			statusTime.innerText = rtf.format(Math.floor(timeSincePost), "seconds") + ` (${status.createdAt.toLocaleString()})`;
-			break;
-		case timeSincePost > -1:
-			statusTime.innerText = `now (${status.createdAt.toLocaleString()})`;
-			break;
-		default:
-			statusTime.innerText = status.createdAt.toLocaleString();
-	}
-
-	statusLink.appendChild(statusTime);
-	statusTimeContainer.appendChild(statusLink);
-
-	out.appendChild(statusTimeContainer);
-
-	return out;
-}
-
-export function renderTimeline(timeline: Timelines, tag?: string) {
-	if(timeline == undefined) {
-		console.warn("Attempted to render timeline, but timeline was undefined.");
-		return;
-	}
-
-	getTimeline(instanceUrl, timeline, tag, lastStatusId).then((data: any) => {
-		let statuses: DocumentFragment = new DocumentFragment();
-
-		for(const status of data) {
-			const statusElement = new customElements.Status;
-
-			statusElement.setAttribute("statusid", status["id"]);
-
-			statuses.appendChild(statusElement);
-		}
-
-		document.getElementById("timeline").appendChild(statuses);
-
-		lastStatusId = data[data.length - 1]["id"];
-	})
-}
-
-export function renderAccountTimeline(id: string) {
-	getAccountTimeline(id).then((data: mastodon.Status[]) => {
-		let statuses: DocumentFragment = new DocumentFragment();
-
-		for(const status of data) {
-			const statusElement = new customElements.Status;
-
-			statusElement.setAttribute("statusid", status["id"]);
-
-			statuses.appendChild(statusElement);
-		}
-
-		document.getElementById("timeline").appendChild(statuses);
-
-		lastStatusId = data[data.length - 1]["id"];
-	})
-}
-
-// export function renderStatusPage(id: string) {
-// 	getStatus(id).then((status: mastodon.Status) => {
-// 		document.body.appendChild(renderStatus(status));
-// 	})
-// }
-
-export function renderAccountPage(id?: string, acct?: string) {
-	if(id) {
-		getAccount(id).then((account: mastodon.Account) => {
-			document.body.insertBefore(renderProfileInfo(account), document.getElementById("timeline"));
-		});
-	} else if(acct) {
-		getAccountByHandle(acct).then((account: mastodon.Account) => {
-			document.body.insertBefore(renderProfileInfo(account), document.getElementById("timeline"));
-		});
-	}
 }
 
 export function setTimeline(endpoint: Timelines) {

@@ -101,6 +101,20 @@ export class Account {
 	}
 }
 
+export class CredentialAccount extends Account {
+	/** An extra attribute that contains source values to be used with API methods that [verify credentials](https://docs.joinmastodon.org/methods/accounts/#verify_credentials) and [update credentials](https://docs.joinmastodon.org/methods/accounts/#update_credentials). */
+	source: object;
+	/** The role assigned to the currently authorized user. */
+	role: Role;
+
+	constructor(data: any) {
+		super(data);
+
+		this.source = data["source"];
+		this.role = data["role"];
+	}
+}
+
 /**
  * Represents a custom emoji.
  */
@@ -210,6 +224,30 @@ export class PreviewCardAuthor {
 		} catch {
 			this.account = null;
 		}
+	}
+}
+
+/**
+ * Represents a custom user role that grants permissions.
+ */
+export class Role {
+	/** The ID of the Role in the database. */
+	id: string;
+	/** The name of the role. */
+	name: string;
+	/** The hex code assigned to this role. If no hex code is assigned, the string will be empty. */
+	color: string;
+	/** A bitmask that represents the sum of all permissions granted to the role. */
+	permissions: string;
+	/** Whether the role is publicly visible as a badge on user profiles. */
+	highlighted: boolean;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.name = data["name"];
+		this.color = data["color"];
+		this.permissions = data["permissions"];
+		this.highlighted = data["highlighted"];
 	}
 }
 
