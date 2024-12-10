@@ -12,6 +12,8 @@
 
 nav {
 	padding: 0 1em;
+
+	transition: font-size cubic-bezier(0,0,0,1) 0.125s;
 }
 
 a {

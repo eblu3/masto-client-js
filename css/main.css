@@ -133,8 +133,6 @@ app-nav-sidebar {
 
 app-timeline {
 	display: block;
-	
-	max-width: var(--max-item-width);
 
-	margin: auto;
+	margin: 0 1em;
 }
