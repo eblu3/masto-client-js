@@ -1,0 +1,56 @@
+form {
+	margin: 1em auto;
+	padding: 1em;
+	overflow: hidden;
+
+	max-width: calc(var(--max-item-width) - 2em);
+	height: 2em;
+
+	background-color: var(--surface-color);
+
+	border-radius: var(--radius-large);
+	box-shadow: 0px 8px 8px rgba(0,0,0,0.5);
+
+	text-align: end;
+	overflow-wrap: break-word;
+
+	transition: max-width cubic-bezier(0,0,0,1) 0.125s,
+				height cubic-bezier(0,0,0,1) 0.125s,
+				box-shadow ease-out 0.125s,
+				background-color ease-out 0.125s;
+}
+
+form:focus, form:focus-within {
+	max-width: calc(var(--max-item-width) * 1.05);
+	height: 75px;
+	
+	background-color: white;
+	color: black;
+	
+	box-shadow: 0px 16px 16px rgba(0,0,0,0.75),
+				inset 0px 0px 0px 2px var(--accent-color);
+}
+
+#post-input {
+	width: 100%;
+	height: 2.875em;
+
+	background-color: transparent;
+	color: inherit;
+
+	border: none;
+
+	font: inherit;
+
+	overflow-y: visible;
+	
+	resize: none;
+}
+
+#post-input:focus {
+	outline: none;
+}
+
+#character-counter {
+	display: inline;
+}

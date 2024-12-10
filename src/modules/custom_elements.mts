@@ -7,6 +7,7 @@ let statusStylesheet: CSSStyleSheet;
 let linkCardStylesheet: CSSStyleSheet;
 let timelineStylesheet: CSSStyleSheet;
 let navigationStylesheet: CSSStyleSheet;
+let postBoxStylesheet: CSSStyleSheet;
 
 let profileHeaderTemplate: DocumentFragment;
 let cardTemplate: DocumentFragment;
@@ -234,10 +235,12 @@ export class Status extends Card {
 			} else if(status.inReplyToId) {
 				this.header.setLabel("💬 reply");
 			}
+
+			console.log(status.account.displayName);
 			
 			this.header.setProfileInfo(
 				status.account.avatar,
-				status.account.displayName ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
+				(status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
 				parseHandle(`@${status.account.acct}`),
 				localProfileUrl
 			);
@@ -449,6 +452,7 @@ export class NavigationSidebar extends HTMLElement {
 }
 
 export class PostBox extends Card {
+	#form: HTMLFormElement;
 	#postInput: HTMLTextAreaElement;
 	#characterCounter: HTMLParagraphElement;
 	#postButton: HTMLButtonElement;
@@ -459,14 +463,14 @@ export class PostBox extends Card {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.adoptedStyleSheets = [commonStylesheet, postBoxStylesheet];
 		shadow.appendChild(postBoxTemplate.cloneNode(true));
 
+		this.#form = shadow.getElementById("form") as HTMLFormElement;
 		this.#postInput = shadow.getElementById("post-input") as HTMLTextAreaElement;
 		this.#characterCounter = shadow.getElementById("character-counter") as HTMLParagraphElement;
 		this.#postButton = shadow.getElementById("post-button") as HTMLButtonElement;
 
-		this.#postInput.style.height = `${this.#postInput.scrollHeight}px`;
 		this.#characterCounter.innerText = `${this.#postInput.value.length}/${charLimit}`;
 
 		this.#postInput.addEventListener("input", (event) => {
@@ -474,6 +478,14 @@ export class PostBox extends Card {
 
 			target.style.height = "auto";
 			target.style.height = `${target.scrollHeight}px`;
+
+			if(target.value != "") {
+				this.#form.style.maxWidth = "calc(var(--max-item-width) * 1.05)";
+				this.#form.style.height = "auto";
+			} else {
+				this.#form.style.removeProperty("max-width");
+				this.#form.style.removeProperty("height");
+			}
 
 			this.#characterCounter.innerText = `${target.value.length}/${charLimit}`;
 
@@ -489,6 +501,10 @@ export class PostBox extends Card {
 			postStatus(this.#postInput.value).then((status) => {
 				this.#postInput.value = "";
 				target.disabled = true;
+				this.#characterCounter.innerText = `0/${charLimit}`;
+
+				this.#form.style.removeProperty("max-width");
+				this.#form.style.removeProperty("height");
 			});
 		});
 	}
@@ -531,6 +547,7 @@ async function initStylesheets() {
 	linkCardStylesheet = await getStylesheet("/css/components/link-card.css");
 	timelineStylesheet = await getStylesheet("/css/components/timeline.css");
 	navigationStylesheet = await getStylesheet("/css/components/navigation.css");
+	postBoxStylesheet = await getStylesheet("/css/components/post-box.css");
 }
 
 function initComponents() {

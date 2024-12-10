@@ -1,9 +1,23 @@
+@media(max-width: 1023px) {
+	nav {
+		font-size: large;
+	}
+}
+
+@media(min-width: 1024px) {
+	nav {
+		font-size: x-large;
+	}
+}
+
 nav {
-	padding: 2em;
+	padding: 0 1em;
 }
 
 a {
 	display: block;
 
-	font-size: large;
+	margin: 0.5em 0;
+
+	text-align: end;
 }

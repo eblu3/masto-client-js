@@ -17,17 +17,16 @@
 
 	--post-avatar-size: 4em;
 
-	--sidebar-width: 8em;
-	--max-item-width: 1024px;
+	--max-item-width: 700px;
 	--header-height: 5em;
 }
 
-@media (max-width: 1023px) {
+@media(max-width: 599px) {
 	body {
 		grid-template-areas:
-			"header"
-			"main";
-		grid-template-rows: var(--header-height) 1fr;
+			"sidebar header"
+			"sidebar main";
+			grid-template-columns: 0 1fr;
 	}
 
 	app-nav-sidebar {
@@ -35,7 +34,7 @@
 	}
 }
 
-@media (min-width: 1024px) {
+@media(min-width: 600px) {
 	body {
 		grid-template-areas:
 			"sidebar header"
@@ -53,6 +52,18 @@
 	}
 }
 
+@media(max-width: 1023px) {
+	:root {
+		--sidebar-width: 8em;
+	}
+}
+
+@media(min-width: 1024px) {
+	:root {
+		--sidebar-width: 16em;
+	}
+}
+
 body {
 	display: grid;
 	grid-template-rows: var(--header-height) 1fr;
@@ -67,6 +78,8 @@ body {
 	color: var(--foreground-color);
 
 	font-family: system-ui, sans-serif;
+
+	transition: grid-template-columns cubic-bezier(0,0,0,1) 0.25s;
 }
 
 main {
@@ -112,6 +125,7 @@ app-nav-sidebar {
 	height: 100vh;
 
 	margin-top: var(--header-height);
+	overflow: hidden;
 
 	position: sticky;
 	top: 0;
@@ -123,30 +137,4 @@ app-timeline {
 	max-width: var(--max-item-width);
 
 	margin: auto;
-}
-
-#post-input-container {
-	margin: 1em auto;
-	padding: 1em;
-
-	max-width: 1024px;
-
-	background-color: var(--surface-color);
-
-	border-radius: var(--radius-large);
-	box-shadow: 0px 8px 8px rgba(0,0,0,0.5);
-
-	overflow-wrap: break-word;
-
-	transition: height 0.5s ease-out;
-}
-
-#post-input-container:focus,
-#post-input-container:focus-within {
-	background-color: var(--surface-color-lighter);
-	
-	box-shadow: 0px 16px 16px rgba(0,0,0,0.75),
-				inset 0px 0px 0px 2px var(--accent-color);
-	
-	transition: box-shadow ease-out 0.125s, background-color ease-out 0.125s;
 }
