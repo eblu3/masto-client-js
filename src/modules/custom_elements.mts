@@ -187,6 +187,14 @@ export class StatusFooter extends HTMLElement {
 		}
 	}
 
+	connectReplyButton(target: HTMLElement) {
+		this.#replyButton.addEventListener("click", (event) => {
+			const replyBox = new ReplyBox;
+			replyBox.setReplyingToId(this.#statusId);
+			target.after(replyBox);
+		})
+	}
+
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
@@ -195,7 +203,7 @@ export class StatusFooter extends HTMLElement {
 		this.#replyButton = shadow.getElementById("reply-button") as HTMLButtonElement;
 		this.#boostButton = shadow.getElementById("boost-button") as HTMLButtonElement;
 		this.#favoriteButton = shadow.getElementById("favorite-button") as HTMLButtonElement;
-
+		
 		this.#boostButton.addEventListener("click", (event) => {
 			if(this.#statusId) {
 				if(this.#boosted) {
@@ -340,6 +348,7 @@ export class Status extends Card {
 			);
 
 			this.footer.setStatusInfo(status.id, undefined, status.reblogged, status.favourited);
+			this.footer.connectReplyButton(this);
 			
 			if(status.language) {
 				this.setAttribute("lang", status.language.language);
@@ -589,13 +598,29 @@ export class NavigationSidebar extends HTMLElement {
 }
 
 export class PostBox extends Card {
-	#form: HTMLFormElement;
-	#postInput: HTMLTextAreaElement;
-	#characterCounter: HTMLParagraphElement;
-	#postButton: HTMLButtonElement;
+	form: HTMLFormElement;
+	postInput: HTMLTextAreaElement;
+	characterCounter: HTMLParagraphElement;
+	postButton: HTMLButtonElement;
 
 	constructor() {
 		super();
+	}
+
+	post() {
+		postStatus(this.postInput.value).then((status) => {
+			postSentEvent = new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
+				status: status
+			}})
+			document.dispatchEvent(postSentEvent);
+
+			this.postInput.value = "";
+			this.postButton.disabled = true;
+			this.characterCounter.innerText = `0/${charLimit}`;
+
+			this.form.style.removeProperty("max-width");
+			this.form.style.removeProperty("height");
+		});
 	}
 
 	connectedCallback() {
@@ -603,52 +628,68 @@ export class PostBox extends Card {
 		shadow.adoptedStyleSheets = [commonStylesheet, postBoxStylesheet];
 		shadow.appendChild(postBoxTemplate.cloneNode(true));
 
-		this.#form = shadow.getElementById("form") as HTMLFormElement;
-		this.#postInput = shadow.getElementById("post-input") as HTMLTextAreaElement;
-		this.#characterCounter = shadow.getElementById("character-counter") as HTMLParagraphElement;
-		this.#postButton = shadow.getElementById("post-button") as HTMLButtonElement;
+		this.form = shadow.getElementById("form") as HTMLFormElement;
+		this.postInput = shadow.getElementById("post-input") as HTMLTextAreaElement;
+		this.characterCounter = shadow.getElementById("character-counter") as HTMLParagraphElement;
+		this.postButton = shadow.getElementById("post-button") as HTMLButtonElement;
 
-		this.#characterCounter.innerText = `${this.#postInput.value.length}/${charLimit}`;
+		this.characterCounter.innerText = `${this.postInput.value.length}/${charLimit}`;
 
-		this.#postInput.addEventListener("input", (event) => {
+		this.postInput.addEventListener("input", (event) => {
 			const target = event.target as HTMLTextAreaElement;
 
 			target.style.height = "auto";
 			target.style.height = `${target.scrollHeight}px`;
 
 			if(target.value != "") {
-				this.#form.style.maxWidth = "calc(var(--max-item-width) * 1.05)";
-				this.#form.style.height = "auto";
+				this.form.style.maxWidth = "calc(var(--max-item-width) * 1.05)";
+				this.form.style.height = "auto";
 			} else {
-				this.#form.style.removeProperty("max-width");
-				this.#form.style.removeProperty("height");
+				this.form.style.removeProperty("max-width");
+				this.form.style.removeProperty("height");
 			}
 
-			this.#characterCounter.innerText = `${target.value.length}/${charLimit}`;
+			this.characterCounter.innerText = `${target.value.length}/${charLimit}`;
 
 			if(target.value === "" || target.value.length > charLimit) {
-				this.#postButton.disabled = true;
+				this.postButton.disabled = true;
 			} else {
-				this.#postButton.disabled = false;
+				this.postButton.disabled = false;
 			}
 		});
 
-		this.#postButton.addEventListener("click", (event) => {
+		this.postButton.addEventListener("click", (event) => {
 			const target = event.target as HTMLButtonElement
-			postStatus(this.#postInput.value).then((status) => {
-				postSentEvent = new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
-					status: status
-				}})
-				document.dispatchEvent(postSentEvent);
-
-				this.#postInput.value = "";
-				target.disabled = true;
-				this.#characterCounter.innerText = `0/${charLimit}`;
-
-				this.#form.style.removeProperty("max-width");
-				this.#form.style.removeProperty("height");
-			});
+			this.post();
 		});
+	}
+}
+
+export class ReplyBox extends PostBox {
+	#replyId: string;
+	
+	constructor() {
+		super();
+	}
+
+	post() {
+		postStatus(this.postInput.value, undefined, undefined, undefined, undefined, undefined, this.#replyId).then((status) => {
+			console.log(status);
+			const newStatus = new Status;
+			newStatus.setStatus(status);
+			this.parentNode.insertBefore(newStatus, this.nextElementSibling);
+			this.remove();
+		})
+	}
+
+	setReplyingToId(id: string) {
+		this.#replyId = id;
+	}
+
+	connectedCallback() {
+		super.connectedCallback();
+
+		this.postButton.innerText = "Reply!";
 	}
 }
 
@@ -707,6 +748,7 @@ function initComponents() {
 			customElements.define("app-timeline", Timeline);
 			customElements.define("app-nav-sidebar", NavigationSidebar);
 			customElements.define("app-post-box", PostBox);
+			customElements.define("app-reply-box", ReplyBox);
 		});
 	});
 }

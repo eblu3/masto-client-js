@@ -228,6 +228,11 @@ export async function postStatus(
 ): Promise<mastodon.Status> | null {
 	try {
 		let params = new URLSearchParams([["status", status]]);
+
+		if(inReplyToId) {
+			params.append("in_reply_to_id", inReplyToId);
+		}
+
 		let response = await fetch(new URL(`/api/v1/statuses?${params.toString()}`, instanceUrl), {
 			method: "POST",
 			headers: {
