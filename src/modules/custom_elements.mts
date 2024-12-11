@@ -33,6 +33,7 @@ export class ProfileHeader extends HTMLElement {
 	#displayName: HTMLHeadingElement;
 	#handle: HTMLParagraphElement;
 	#bio: HTMLParagraphElement;
+	#fields: HTMLTableElement;
 	
 	constructor() {
 		super();
@@ -44,6 +45,15 @@ export class ProfileHeader extends HTMLElement {
 		this.#displayName.innerHTML = renderEmojis(account.displayName, account.emojis);
 		this.#handle.innerText = `@${account.acct}`;
 		this.#bio.innerHTML = renderEmojis(account.note, account.emojis);
+
+		for(const field of account.fields) {
+			const newRow = this.#fields.insertRow();
+			const rowName = newRow.insertCell();
+			const rowValue = newRow.insertCell();
+
+			rowName.outerHTML = `<th>${renderEmojis(field.name, account.emojis)}</th>`;
+			rowValue.innerHTML = renderEmojis(field.value, account.emojis);
+		}
 	}
 
 	connectedCallback() {
@@ -56,6 +66,7 @@ export class ProfileHeader extends HTMLElement {
 		this.#displayName = shadow.getElementById("display-name") as HTMLHeadingElement;
 		this.#handle = shadow.getElementById("handle") as HTMLParagraphElement;
 		this.#bio = shadow.getElementById("bio") as HTMLParagraphElement;
+		this.#fields = shadow.getElementById("fields") as HTMLTableElement;
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {

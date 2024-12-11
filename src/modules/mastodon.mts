@@ -40,7 +40,7 @@ export class Account {
 	/** Whether the account manually approves follow requests. */
 	locked: boolean;
 	/** Additional metadata attached to a profile as name-value pairs. */
-	fields: object[];
+	fields: Field[];
 	/** Custom emoji entities to be used when rendering the profile. */
 	emojis: CustomEmoji[];
 	/** Indicates that the account may perform automated actions, may not be monitored, or identifies as a robot. */
@@ -136,6 +136,21 @@ export class CustomEmoji {
 		this.staticUrl = new URL(data["static_url"]);
 		this.visibleInPicker = data["visible_in_picker"];
 		this.category = data["category"];
+	}
+}
+
+export class Field {
+	/** The key of a given field's key-value pair. */
+	name: string;
+	/** The value associated with the `name` key. */
+	value: string;
+	/** Timestamp of when the server verified a URL value for a rel="me" link. */
+	verifiedAt?: string;
+
+	constructor(data: any) {
+		this.name = data["name"];
+		this.value = data["value"];
+		this.verifiedAt = data["verified_at"] ?? undefined;
 	}
 }
 
