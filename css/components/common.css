@@ -6,7 +6,11 @@ a:hover {
 	color: var(--accent-color-lighter);
 }
 
-.custom-emoji {
+textarea, button, input {
+	font-family: inherit;
+}
+
+.custom-emoji, .inline-img {
 	max-height: 1.25em;
 	vertical-align: bottom;
 }

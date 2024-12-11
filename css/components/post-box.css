@@ -11,7 +11,6 @@ form {
 	border-radius: var(--radius-large);
 	box-shadow: 0px 8px 8px rgba(0,0,0,0.5);
 
-	text-align: end;
 	overflow-wrap: break-word;
 
 	transition: max-width cubic-bezier(0,0,0,1) 0.125s,
@@ -40,8 +39,6 @@ form:focus, form:focus-within {
 
 	border: none;
 
-	font: inherit;
-
 	overflow-y: visible;
 	
 	resize: none;
@@ -49,6 +46,10 @@ form:focus, form:focus-within {
 
 #post-input:focus {
 	outline: none;
+}
+
+#post-options {
+	text-align: end;
 }
 
 #character-counter {

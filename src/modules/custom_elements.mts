@@ -20,9 +20,8 @@ let linkCardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
 let navigationSidebarTemplate: DocumentFragment;
 let postBoxTemplate: DocumentFragment;
+let tagInputTemplate: DocumentFragment;
 
-let postSentEventDispatcher: HTMLElement;
-let postSentEventStatus: mastodon.Status;
 let postSentEvent: CustomEvent;
 
 export class ProfileHeader extends HTMLElement {
@@ -339,18 +338,15 @@ export class Status extends Card {
 		if(!(this.header && this.footer)) {
 			setTimeout(() => {this.setStatus(status, reblog, reblogger)}, 100);
 		} else {
-			console.log(status);
 			const localProfileUrl = new URL("./user/", window.location.origin);
 			localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
 
 			if(reblog) {
-				this.header.setLabel(`🔁 ${renderEmojis(reblogger.displayName, reblogger.emojis)} boosted`);
+				this.header.setLabel(`<a href="/user/?acct=@${reblogger.acct}">🔁 <img class="avatar inline-img" src="${reblogger.avatar}" alt=""> <span class="display-name">${renderEmojis(reblogger.displayName, reblogger.emojis)}</span> boosted</a>`);
 			} else if(status.inReplyToId) {
 				this.header.setLabel("💬 reply");
 			}
 
-			console.log(status.account.displayName);
-			
 			this.header.setProfileInfo(
 				status.account.avatar,
 				(status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
@@ -608,9 +604,22 @@ export class NavigationSidebar extends HTMLElement {
 	}
 }
 
+export class TagInput extends HTMLElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.appendChild(tagInputTemplate.cloneNode(true));
+	}
+}
+
 export class PostBox extends Card {
 	form: HTMLFormElement;
 	postInput: HTMLTextAreaElement;
+	tagsInput: HTMLDivElement;
 	characterCounter: HTMLParagraphElement;
 	postButton: HTMLButtonElement;
 
@@ -619,7 +628,21 @@ export class PostBox extends Card {
 	}
 
 	post() {
-		postStatus(this.postInput.value).then((status) => {
+		let postText = this.postInput.value;
+		let tags = "";
+
+		this.tagsInput.childNodes.forEach((tagInput: TagInput, index) => {
+			tags += (tagInput.shadowRoot.getElementById("input") as HTMLInputElement).value;
+			if(index < this.tagsInput.childNodes.length - 1) {
+				tags += " ";
+			}
+		});
+
+		if(tags != "") {
+			postText += "\n\n" + tags;
+		}
+
+		postStatus(postText).then((status) => {
 			postSentEvent = new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
 				status: status
 			}})
@@ -634,6 +657,27 @@ export class PostBox extends Card {
 		});
 	}
 
+	registerTagInputListener(input: TagInput) {
+		if(!input.shadowRoot) {
+			setTimeout(() => this.registerTagInputListener(input), 500);
+		} else {
+			input.shadowRoot.getElementById("input").addEventListener("change", (event) => {
+				const target = event.target as HTMLInputElement;
+				if(target.value == "" && this.tagsInput.childElementCount > 1) {
+					target.remove();
+				} else {
+					const newTagInput = new TagInput;
+					this.registerTagInputListener(newTagInput);
+					this.tagsInput.appendChild(newTagInput);
+				}
+
+				if(target.value[0] != "#") {
+					target.value = `#${target.value}`;
+				}
+			});
+		}
+	}
+
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet, postBoxStylesheet];
@@ -643,6 +687,15 @@ export class PostBox extends Card {
 		this.postInput = shadow.getElementById("post-input") as HTMLTextAreaElement;
 		this.characterCounter = shadow.getElementById("character-counter") as HTMLParagraphElement;
 		this.postButton = shadow.getElementById("post-button") as HTMLButtonElement;
+		
+		this.tagsInput = document.createElement("div");
+		this.tagsInput.slot = "tags";
+		const firstTagInput = new TagInput;
+
+		this.registerTagInputListener(firstTagInput);
+
+		this.tagsInput.appendChild(firstTagInput);
+		this.appendChild(this.tagsInput);
 
 		this.characterCounter.innerText = `${this.postInput.value.length}/${charLimit}`;
 
@@ -684,7 +737,21 @@ export class ReplyBox extends PostBox {
 	}
 
 	post() {
-		postStatus(this.postInput.value, undefined, undefined, undefined, undefined, undefined, this.#replyId).then((status) => {
+		let postText = this.postInput.value;
+		let tags = "";
+
+		this.tagsInput.childNodes.forEach((tagInput: TagInput, index) => {
+			tags += (tagInput.shadowRoot.getElementById("input") as HTMLInputElement).value;
+			if(index < this.tagsInput.childNodes.length - 1) {
+				tags += " ";
+			}
+		});
+
+		if(tags != "") {
+			postText += "\n\n" + tags;
+		}
+
+		postStatus(postText, undefined, undefined, undefined, undefined, undefined, this.#replyId).then((status) => {
 			console.log(status);
 			const newStatus = new Status;
 			newStatus.setStatus(status);
@@ -733,6 +800,7 @@ async function initTemplates() {
 	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
 	navigationSidebarTemplate = await getTemplate("/templates/navigation.html", "sidebar");
 	postBoxTemplate = await getTemplate("/templates/post.html", "postbox");
+	tagInputTemplate = await getTemplate("/templates/post.html", "taginput");
 }
 
 async function initStylesheets() {
@@ -750,14 +818,19 @@ function initComponents() {
 		initStylesheets().then(() => {
 			customElements.define("app-card", Card);
 			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
+
 			customElements.define("app-status-header", StatusHeader, {extends: "header"});
 			customElements.define("app-status-footer", StatusFooter, {extends: "footer"});
 			customElements.define("app-status-content", StatusContent);
 			customElements.define("app-status-content-warned", StatusContentWarned);
 			customElements.define("app-status", Status);
 			customElements.define("app-link-card", LinkCard);
+
 			customElements.define("app-timeline", Timeline);
+
 			customElements.define("app-nav-sidebar", NavigationSidebar);
+
+			customElements.define("app-tag-input", TagInput);
 			customElements.define("app-post-box", PostBox);
 			customElements.define("app-reply-box", ReplyBox);
 		});

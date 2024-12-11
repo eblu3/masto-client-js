@@ -1,7 +1,14 @@
 <template id="postbox">
 	<form id="form" action="" onsubmit="return false;">
 		<textarea id="post-input" placeholder="📝 What's up?"></textarea>
-		<p id="character-counter">0/0</p>
-		<button id="post-button" disabled="true">Post!</button>
+		<slot name="tags"></slot>
+		<div id="post-options">
+			<p id="character-counter">0/0</p>
+			<button id="post-button" disabled="true">Post!</button>
+		</div>
 	</form>
+</template>
+
+<template id="taginput">
+	<input id="input" type="text" placeholder="#tag">
 </template>
