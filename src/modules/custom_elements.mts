@@ -665,6 +665,9 @@ export class NavigationSidebar extends HTMLElement {
 }
 
 export class TagInput extends HTMLElement {
+	hasSpawnedNextInput: boolean;
+	nextInput: HTMLInputElement;
+	
 	constructor() {
 		super();
 	}
@@ -673,6 +676,8 @@ export class TagInput extends HTMLElement {
 		const shadow = this.attachShadow({mode: "open"});
 		shadow.adoptedStyleSheets = [commonStylesheet];
 		shadow.appendChild(tagInputTemplate.cloneNode(true));
+
+		this.hasSpawnedNextInput = false;
 	}
 }
 
@@ -721,20 +726,75 @@ export class PostBox extends Card {
 		if(!input.shadowRoot) {
 			setTimeout(() => this.registerTagInputListener(input), 500);
 		} else {
-			input.shadowRoot.getElementById("input").addEventListener("change", (event) => {
+			const inputElement = input.shadowRoot.getElementById("input") as HTMLInputElement;
+
+			inputElement.addEventListener("input", (event) => {
 				const target = event.target as HTMLInputElement;
-				if(target.value == "" && this.tagsInput.childElementCount > 1) {
-					target.remove();
-				} else {
-					const newTagInput = new TagInput;
-					this.registerTagInputListener(newTagInput);
-					this.tagsInput.appendChild(newTagInput);
+				
+				if(target.value.includes(" ")) {
+					target.value = target.value.replaceAll(" ", "");
+				}
+
+				if(target.value.includes(",")) {
+					target.value = target.value.replaceAll(",", "");
 				}
 
 				if(target.value[0] != "#") {
 					target.value = `#${target.value}`;
 				}
 			});
+
+			inputElement.addEventListener("focus", (event) => {
+				const target = event.target as HTMLInputElement;
+
+				if(target.value == "") {
+					target.value = "#";
+				}
+			});
+
+			inputElement.addEventListener("blur", (event) => {
+				const target = event.target as HTMLInputElement;
+
+				if((target.value == "")) {
+					target.value = "";
+					if(this.tagsInput.childElementCount > 1) {
+						input.remove();
+					}
+				}
+
+				if(target.value == "#") {
+					target.value = "";
+				}
+			});
+
+			inputElement.addEventListener("change", (event) => {
+				const target = event.target as HTMLInputElement;
+
+				if(target.value.includes(" ")) {
+					target.value = target.value.replaceAll(" ", "");
+				}
+			});
+
+			inputElement.addEventListener("keyup", (event) => {
+				const target = event.target as HTMLInputElement;
+
+				if((event.key == " " || event.key == ",") && (target.value != "" && target.value != "#")) {
+					const newTagInput = new TagInput;
+					this.registerTagInputListener(newTagInput);
+					this.tagsInput.appendChild(newTagInput);
+					newTagInput.shadowRoot.getElementById("input").focus();
+				}
+			});
+
+			inputElement.addEventListener("keydown", (event) => {
+				const target = event.target as HTMLInputElement;
+				if(event.key == "Backspace" && (target.value == "" || target.value == "#")) {
+					if(this.tagsInput.childElementCount > 1) {
+						input.previousElementSibling.shadowRoot.getElementById("input").focus();
+						input.remove();
+					}
+				}
+			})
 		}
 	}
 
