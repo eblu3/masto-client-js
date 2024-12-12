@@ -45,10 +45,16 @@ export class ProfileHeader extends HTMLElement {
 		this.#handle.innerText = `@${account.acct}`;
 		this.#bio.innerHTML = renderEmojis(account.note, account.emojis);
 
+		console.log(account.fields);
+
 		for(const field of account.fields) {
 			const newRow = this.#fields.insertRow();
 			const rowName = newRow.insertCell();
 			const rowValue = newRow.insertCell();
+
+			if(field.verifiedAt) {
+				newRow.classList.add("verified");
+			}
 
 			rowName.outerHTML = `<th>${renderEmojis(field.name, account.emojis)}</th>`;
 			rowValue.innerHTML = renderEmojis(field.value, account.emojis);

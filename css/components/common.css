@@ -10,6 +10,14 @@ textarea, button, input, select {
 	font-family: inherit;
 }
 
+tr.verified {
+	background-color: darkgreen;
+}
+
+tr.verified::after {
+	content: "✓";
+}
+
 .custom-emoji, .inline-img {
 	max-height: 1.25em;
 	vertical-align: bottom;

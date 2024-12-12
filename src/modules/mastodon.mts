@@ -83,8 +83,17 @@ export class Account {
 			this.header = new URL(data["header"]);
 			this.headerStatic = new URL(data["header_static"]);
 			this.locked = data["locked"];
-			this.fields = data["fields"];
-			this.emojis = data["emojis"];
+
+			this.fields = [];
+			for(const field of data["fields"]) {
+				this.fields.push(new Field(field));
+			}
+
+			this.emojis = [];
+			for(const emoji of data["emojis"]) {
+				this.emojis.push(new CustomEmoji(emoji));
+			}
+
 			this.bot = data["bot"];
 			this.group = data["group"];
 			this.discoverable = data["discoverable"] ?? null;
@@ -145,12 +154,12 @@ export class Field {
 	/** The value associated with the `name` key. */
 	value: string;
 	/** Timestamp of when the server verified a URL value for a rel="me" link. */
-	verifiedAt?: string;
+	verifiedAt?: Date;
 
 	constructor(data: any) {
 		this.name = data["name"];
 		this.value = data["value"];
-		this.verifiedAt = data["verified_at"] ?? undefined;
+		this.verifiedAt = data["verified_at"] ? new Date(data["verified_at"]) : null;
 	}
 }
 
