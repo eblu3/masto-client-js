@@ -41,7 +41,7 @@ export class ProfileHeader extends HTMLElement {
 	setAccount(account: mastodon.Account) {
 		this.#container.style.setProperty("--header-url", `url(${account.header.href})`);
 		this.#avatar.src = account.avatar.href;
-		this.#displayName.innerHTML = renderEmojis(account.displayName, account.emojis);
+		this.#displayName.innerHTML = (account.displayName || account.displayName != "") ? renderEmojis(account.displayName, account.emojis) : account.username;
 		this.#handle.innerText = `@${account.acct}`;
 		this.#bio.innerHTML = renderEmojis(account.note, account.emojis);
 
@@ -342,7 +342,7 @@ export class Status extends Card {
 			localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
 
 			if(reblog) {
-				this.header.setLabel(`<a href="/user/?acct=@${reblogger.acct}">🔁 <img class="avatar inline-img" src="${reblogger.avatar}" alt=""> <span class="display-name">${renderEmojis(reblogger.displayName, reblogger.emojis)}</span> boosted</a>`);
+				this.header.setLabel(`<a href="/user/?acct=@${reblogger.acct}">🔁 <img class="avatar inline-img" src="${reblogger.avatar}" alt=""> <span class="display-name">${(reblogger.displayName || reblogger.displayName != "") ? renderEmojis(reblogger.displayName, reblogger.emojis) : reblogger.username}</span> boosted</a>`);
 			} else if(status.inReplyToId) {
 				this.header.setLabel("💬 reply");
 			}
@@ -528,7 +528,11 @@ export class Timeline extends HTMLElement {
 			}
 		}
 
-		this.#lastPostId = data[data.length - 1].id;
+		try {
+			this.#lastPostId = data[data.length - 1].id;
+		} catch(error) {
+
+		}
 
 		this.shadowRoot.insertBefore(statuses, this.#loadMoreButton);
 	}
