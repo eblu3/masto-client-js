@@ -541,7 +541,7 @@ export class Timeline extends HTMLElement {
 					this.addStatuses(data);
 				});
 				break;
-			case "Hashtag":
+			case Timelines.Hashtag:
 				getTimeline(instanceUrl, Timelines.Hashtag, value, this.#lastPostId).then((data: any) => {
 					this.addStatuses(data);
 				});
@@ -755,9 +755,9 @@ export class PostBox extends Card {
 			inputElement.addEventListener("blur", (event) => {
 				const target = event.target as HTMLInputElement;
 
-				if((target.value == "")) {
+				if(target.value == "" || target.value == "#") {
 					target.value = "";
-					if(this.tagsInput.childElementCount > 1) {
+					if(this.tagsInput.childElementCount > 2) {
 						input.remove();
 					}
 				}
@@ -767,13 +767,13 @@ export class PostBox extends Card {
 				}
 			});
 
-			inputElement.addEventListener("change", (event) => {
-				const target = event.target as HTMLInputElement;
+			// inputElement.addEventListener("change", (event) => {
+			// 	const target = event.target as HTMLInputElement;
 
-				if(target.value.includes(" ")) {
-					target.value = target.value.replaceAll(" ", "");
-				}
-			});
+			// 	if(target.value.includes(" ")) {
+			// 		target.value = target.value.replaceAll(" ", "");
+			// 	}
+			// });
 
 			inputElement.addEventListener("keyup", (event) => {
 				const target = event.target as HTMLInputElement;
@@ -789,7 +789,7 @@ export class PostBox extends Card {
 			inputElement.addEventListener("keydown", (event) => {
 				const target = event.target as HTMLInputElement;
 				if(event.key == "Backspace" && (target.value == "" || target.value == "#")) {
-					if(this.tagsInput.childElementCount > 1) {
+					if(this.tagsInput.childElementCount > 2) {
 						input.previousElementSibling.shadowRoot.getElementById("input").focus();
 						input.remove();
 					}

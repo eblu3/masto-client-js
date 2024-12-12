@@ -3,6 +3,13 @@
 		<textarea id="post-input" placeholder="📝 What's up?"></textarea>
 		<slot name="tags"></slot>
 		<div id="post-options">
+			<input type="file" multiple>
+			<select name="privacy" id="privacy-select">
+				<option>Public</option>
+				<option>Unlisted</option>
+				<option>Followers only</option>
+				<option>Mentioned users only</option>
+			</select>
 			<p id="character-counter">0/0</p>
 			<button id="post-button" disabled="true">Post!</button>
 		</div>

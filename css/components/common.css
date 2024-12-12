@@ -6,7 +6,7 @@ a:hover {
 	color: var(--accent-color-lighter);
 }
 
-textarea, button, input {
+textarea, button, input, select {
 	font-family: inherit;
 }
 
