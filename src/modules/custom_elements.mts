@@ -770,6 +770,11 @@ export class PostBox extends Card {
 					if(this.tagsInput.childElementCount > 2) {
 						input.remove();
 					}
+				} else if(!input.hasSpawnedNextInput) {
+					const newTagInput = new TagInput;
+					this.registerTagInputListener(newTagInput);
+					this.tagsInput.appendChild(newTagInput);
+					input.hasSpawnedNextInput = true;
 				}
 
 				if(target.value == "#") {
@@ -792,6 +797,7 @@ export class PostBox extends Card {
 					const newTagInput = new TagInput;
 					this.registerTagInputListener(newTagInput);
 					this.tagsInput.appendChild(newTagInput);
+					input.hasSpawnedNextInput = true;
 					newTagInput.shadowRoot.getElementById("input").focus();
 				}
 			});
@@ -799,7 +805,7 @@ export class PostBox extends Card {
 			inputElement.addEventListener("keydown", (event) => {
 				const target = event.target as HTMLInputElement;
 				if(event.key == "Backspace" && (target.value == "" || target.value == "#")) {
-					if(this.tagsInput.childElementCount > 2) {
+					if(this.tagsInput.childElementCount > 1) {
 						input.previousElementSibling.shadowRoot.getElementById("input").focus();
 						input.remove();
 					}
