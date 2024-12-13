@@ -1,3 +1,7 @@
+import { instanceUrl, token } from "./masto_ts.mjs";
+
+// === ENUMS === //
+
 export enum AttachmentType {
 	Unknown = "unknown",
 	Image = "image",
@@ -12,6 +16,14 @@ export enum PreviewCardType {
 	Video = "video",
 	Rich = "rich"
 }
+
+export enum Timelines {
+	Public = "/api/v1/timelines/public",
+	Hashtag = "/api/v1/timelines/tag/",
+	Home = "/api/v1/timelines/home"
+}
+
+// === API ENTITIES === //
 
 /**
  * Represents a user of Mastodon and their associated profile.
@@ -438,3 +450,338 @@ export class MediaAttachment {
 		this.blurhash = data["blurhash"];
 	}
 }
+
+// === API METHODS === //
+
+// == GET == //
+
+export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string): Promise<Status[]> | null {
+	let newEndpoint: string = endpoint;
+
+	if (endpoint === Timelines.Hashtag) {
+		newEndpoint = newEndpoint + tag;
+	}
+
+	console.log(`Fetching timeline ${newEndpoint} from instance ${url.href}...`);
+
+	try {
+		let response;
+
+		if (startAtId) {
+			response = await fetch(new URL(`${newEndpoint}?max_id=${startAtId}`, url), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL(newEndpoint, url), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		}
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		console.log("Got it!");
+		console.log(json);
+
+		let processedStatuses: Status[] = [];
+
+		for (const status of json) {
+			processedStatuses.push(new Status(status));
+		}
+
+		return processedStatuses;
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getAccountTimeline(id: string, startAtId?: string): Promise<Status[]> | null {
+	console.log(`Fetching account ID ${id}'s timeline from instance ${instanceUrl}...`);
+	try {
+		let response;
+
+		if (token) {
+			if (startAtId) {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, instanceUrl), {
+					headers: {
+						"Authorization": `Bearer ${token}`
+					}
+				});
+			} else {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl), {
+					headers: {
+						"Authorization": `Bearer ${token}`
+					}
+				});
+			}
+		} else {
+			if (startAtId) {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, instanceUrl));
+			} else {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl));
+			}
+		}
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		console.log("Got it!");
+		console.log(json);
+
+		let processedStatuses: Status[] = [];
+
+		for (const status of json) {
+			processedStatuses.push(new Status(status));
+		}
+
+		return processedStatuses;
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getStatus(id: string): Promise<[Status, boolean, Account]> | null {
+	try {
+		let response;
+
+		if (token) {
+			response = await fetch(new URL(`/api/v1/statuses/${id}`, instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL(`/api/v1/statuses/${id}`, instanceUrl));
+		}
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const status = new Status(await response.json());
+
+		return status.reblog ? [status.reblog, true, status.account] : [status, false, undefined];
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getAccount(id: string): Promise<Account> | null {
+	try {
+		let response;
+
+		if (token) {
+			response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
+		}
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const account = new Account(await response.json());
+
+		return account;
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getAccountByHandle(acct: string) {
+	try {
+		let response;
+
+		if (token) {
+			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl));
+		}
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const account = new Account(await response.json());
+
+		return account;
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getCurrentAccount(): Promise<CredentialAccount> | null {
+	try {
+		let response = await fetch(new URL("/api/v1/accounts/verify_credentials", instanceUrl), {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		return new CredentialAccount(await response.json());
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+// == POST == //
+
+export async function postStatus(
+	status?: string,
+	mediaIds?: string[],
+	pollOptions?: string[],
+	pollExpiresIn?: number,
+	pollMultipleChoice?: boolean,
+	pollHideTotals?: boolean,
+	inReplyToId?: string,
+	isSensitive?: boolean,
+	spoilerText?: string,
+	visibility?: string,
+	language?: string,
+	scheduledAt?: string
+): Promise<Status> | null {
+	try {
+		let params = new URLSearchParams([["status", status]]);
+
+		if (inReplyToId) {
+			params.append("in_reply_to_id", inReplyToId);
+		}
+
+		let response = await fetch(new URL(`/api/v1/statuses?${params.toString()}`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const postedStatus = new Status(await response.json());
+
+		return postedStatus;
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function favoriteStatus(id: string): Promise<Status> | null {
+	console.log(`Favoriting status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/favourite`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status favorited!");
+
+		return new Status(await response.json());
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function unfavoriteStatus(id: string): Promise<Status> | null {
+	console.log(`Removing favorite from status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/unfavourite`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status unfavorited!");
+
+		return new Status(await response.json());
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+// TODO: change visibility to enum and implement it
+export async function boostStatus(id: string, visibility?: string): Promise<Status> | null {
+	console.log(`Boosting status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/reblog`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status boosted!");
+
+		return new Status(await response.json());
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+export async function unboostStatus(id: String): Promise<Status> | null {
+	console.log(`Removing boost from status ${id}...`);
+	try {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/unreblog`, instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		console.log("Status unboosted!");
+
+		return new Status(await response.json());
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
+

@@ -1,5 +1,5 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getStatus, getTimeline, getAccount, getAccountByHandle, getRelativeTimeString, renderEmojis, renderAttachments, Timelines, getAccountTimeline, parseHandle, charLimit, postStatus, favoriteStatus, unfavoriteStatus, boostStatus, unboostStatus, getLoggedInAccount} from "./masto_ts.mjs";
+import {instanceUrl, getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, charLimit} from "./masto_ts.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -76,11 +76,11 @@ export class ProfileHeader extends HTMLElement {
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "acctid") {
-			getAccount(newValue).then((account) => {
+			mastodon.getAccount(newValue).then((account) => {
 				this.setAccount(account);
 			});
 		} else if(name == "acct") {
-			getAccountByHandle(newValue).then((account) => {
+			mastodon.getAccountByHandle(newValue).then((account) => {
 				this.setAccount(account);
 			});
 		}
@@ -223,9 +223,9 @@ export class StatusFooter extends HTMLElement {
 		this.#boostButton.addEventListener("click", (event) => {
 			if(this.#statusId) {
 				if(this.#boosted) {
-					unboostStatus(this.#statusId).then(() => this.setBoosted(false));
+					mastodon.unboostStatus(this.#statusId).then(() => this.setBoosted(false));
 				} else {
-					boostStatus(this.#statusId).then((status) => {
+					mastodon.boostStatus(this.#statusId).then((status) => {
 						this.setBoosted(true);
 					});
 				}
@@ -235,9 +235,9 @@ export class StatusFooter extends HTMLElement {
 		this.#favoriteButton.addEventListener("click", (event) => {
 			if(this.#statusId) {
 				if(this.#faved) {
-					unfavoriteStatus(this.#statusId).then(() => this.setFaved(false));
+					mastodon.unfavoriteStatus(this.#statusId).then(() => this.setFaved(false));
 				} else {
-					favoriteStatus(this.#statusId).then((status) => {
+					mastodon.favoriteStatus(this.#statusId).then((status) => {
 						this.setFaved(true);
 					});
 				}
@@ -414,7 +414,7 @@ export class Status extends Card {
 	}
 
 	setStatusById(statusId: string) {
-		getStatus(statusId).then(([status, reblog, reblogger]) => {
+		mastodon.getStatus(statusId).then(([status, reblog, reblogger]) => {
 			this.setStatus(status, reblog, reblogger);
 		});
 	}
@@ -547,17 +547,17 @@ export class Timeline extends HTMLElement {
 		console.log(`lt: ${type} ${value}`);
 		switch(type) {
 			case "Account":
-				getAccountTimeline(value).then((data: mastodon.Status[]) => {
+				mastodon.getAccountTimeline(value).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
-			case Timelines.Hashtag:
-				getTimeline(instanceUrl, Timelines.Hashtag, value, this.#lastPostId).then((data: any) => {
+			case mastodon.Timelines.Hashtag:
+				mastodon.getTimeline(instanceUrl, mastodon.Timelines.Hashtag, value, this.#lastPostId).then((data: any) => {
 					this.addStatuses(data);
 				});
 				break;
 			default:
-				getTimeline(instanceUrl, Timelines[type as keyof typeof Timelines], undefined, undefined).then((data: any) => {
+				mastodon.getTimeline(instanceUrl, mastodon.Timelines[type as keyof typeof mastodon.Timelines], undefined, undefined).then((data: any) => {
 					this.addStatuses(data);
 				});
 		}
@@ -578,11 +578,11 @@ export class Timeline extends HTMLElement {
 			const currentTimeline = this.getAttribute("type");
 
 			if(!(currentTimeline == "Account" || currentTimeline == "Hashtag")) {
-				getTimeline(instanceUrl, Timelines[currentTimeline as keyof typeof Timelines], undefined, this.#lastPostId).then((data) => this.addStatuses(data));
+				mastodon.getTimeline(instanceUrl, mastodon.Timelines[currentTimeline as keyof typeof mastodon.Timelines], undefined, this.#lastPostId).then((data) => this.addStatuses(data));
 			} else if(currentTimeline == "Account") {
-				getAccountTimeline(this.getAttribute("acctid"), this.#lastPostId).then((data) => this.addStatuses(data));
+				mastodon.getAccountTimeline(this.getAttribute("acctid"), this.#lastPostId).then((data) => this.addStatuses(data));
 			} else if(currentTimeline == "Hashtag") {
-				getTimeline(instanceUrl, Timelines.Hashtag, this.getAttribute("tag"), this.#lastPostId).then((data) => this.addStatuses(data));
+				mastodon.getTimeline(instanceUrl, mastodon.Timelines.Hashtag, this.getAttribute("tag"), this.#lastPostId).then((data) => this.addStatuses(data));
 			}
 		});
 
@@ -604,7 +604,7 @@ export class Timeline extends HTMLElement {
 				if(timelineType == "Account" && this.getAttribute("acctid")) {
 					this.loadTimeline("Account", this.getAttribute("acctid"));
 				} else if(timelineType == "Hashtag" && this.getAttribute("tag")) {
-					this.loadTimeline(Timelines.Hashtag, this.getAttribute("tag"));
+					this.loadTimeline(mastodon.Timelines.Hashtag, this.getAttribute("tag"));
 				} else if(timelineType) {
 					this.loadTimeline(timelineType);
 				}
@@ -622,7 +622,7 @@ export class Timeline extends HTMLElement {
 				if(timelineType == "Account" && this.getAttribute("acctid")) {
 					this.loadTimeline("Account", this.getAttribute("acctid"));
 				} else if(timelineType == "Hashtag" && this.getAttribute("tag")) {
-					this.loadTimeline(Timelines.Hashtag, this.getAttribute("tag"));
+					this.loadTimeline(mastodon.Timelines.Hashtag, this.getAttribute("tag"));
 				} else if(timelineType) {
 					this.loadTimeline(timelineType);
 				}
@@ -645,7 +645,7 @@ export class Timeline extends HTMLElement {
 					if(this.shadowRoot) {
 						this.shadowRoot.replaceChildren(this.#loadMoreButton);
 					}
-					this.loadTimeline(Timelines.Hashtag, newValue);
+					this.loadTimeline(mastodon.Timelines.Hashtag, newValue);
 				} else {
 					console.warn("Changed tag, but this timeline isn't set to Hashtag.");
 				}
@@ -668,7 +668,7 @@ export class NavigationSidebar extends HTMLElement {
 
 		this.#youLink = shadow.getElementById("you-link") as HTMLAnchorElement;
 		
-		getLoggedInAccount().then((account) => {
+		mastodon.getCurrentAccount().then((account) => {
 			this.#youLink.href = `/user/?acct=@${account.acct}`;
 		})
 	}
@@ -718,7 +718,7 @@ export class PostBox extends Card {
 			postText += "\n\n" + tags;
 		}
 
-		postStatus(postText).then((status) => {
+		mastodon.postStatus(postText).then((status) => {
 			postSentEvent = new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
 				status: status
 			}})
@@ -909,7 +909,7 @@ export class ReplyBox extends PostBox {
 			postText += "\n\n" + tags;
 		}
 
-		postStatus(postText, undefined, undefined, undefined, undefined, undefined, this.#replyId).then((status) => {
+		mastodon.postStatus(postText, undefined, undefined, undefined, undefined, undefined, this.#replyId).then((status) => {
 			console.log(status);
 			const newStatus = new Status;
 			newStatus.setStatus(status);
