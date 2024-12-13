@@ -676,7 +676,6 @@ export class NavigationSidebar extends HTMLElement {
 
 export class TagInput extends HTMLElement {
 	hasSpawnedNextInput: boolean;
-	nextInput: HTMLInputElement;
 	
 	constructor() {
 		super();
@@ -697,6 +696,8 @@ export class PostBox extends Card {
 	tagsInput: HTMLDivElement;
 	characterCounter: HTMLParagraphElement;
 	postButton: HTMLButtonElement;
+
+	characterCount: number;
 
 	constructor() {
 		super();
@@ -752,6 +753,21 @@ export class PostBox extends Card {
 				if(target.value[0] != "#") {
 					target.value = `#${target.value}`;
 				}
+
+				if((target.value != "" && target.value != "#") && !input.hasSpawnedNextInput) {
+					const newTagInput = new TagInput;
+					this.registerTagInputListener(newTagInput);
+					this.tagsInput.appendChild(newTagInput);
+					input.hasSpawnedNextInput = true;
+				} else if((target.value == "" || target.value == "#") && input.hasSpawnedNextInput) {
+					if(this.tagsInput.childElementCount > 1) {
+						input.nextElementSibling.remove();
+						input.hasSpawnedNextInput = false;
+					}
+				}
+
+				this.characterCount = this.postInput.value.length + this.getTagsCharacterCount();
+				this.characterCounter.innerText = `${this.characterCount}/${charLimit}`;
 			});
 
 			inputElement.addEventListener("focus", (event) => {
@@ -782,23 +798,11 @@ export class PostBox extends Card {
 				}
 			});
 
-			// inputElement.addEventListener("change", (event) => {
-			// 	const target = event.target as HTMLInputElement;
-
-			// 	if(target.value.includes(" ")) {
-			// 		target.value = target.value.replaceAll(" ", "");
-			// 	}
-			// });
-
 			inputElement.addEventListener("keyup", (event) => {
 				const target = event.target as HTMLInputElement;
 
-				if((event.key == " " || event.key == ",") && (target.value != "" && target.value != "#")) {
-					const newTagInput = new TagInput;
-					this.registerTagInputListener(newTagInput);
-					this.tagsInput.appendChild(newTagInput);
-					input.hasSpawnedNextInput = true;
-					newTagInput.shadowRoot.getElementById("input").focus();
+				if((event.key == " " || event.key == ",") && (target.value != "" && target.value != "#") && input.hasSpawnedNextInput) {
+					input.nextElementSibling.shadowRoot.getElementById("input").focus();
 				}
 			});
 
@@ -807,11 +811,25 @@ export class PostBox extends Card {
 				if(event.key == "Backspace" && (target.value == "" || target.value == "#")) {
 					if(this.tagsInput.childElementCount > 1) {
 						input.previousElementSibling.shadowRoot.getElementById("input").focus();
+						(input.previousElementSibling as TagInput).hasSpawnedNextInput = false;
 						input.remove();
 					}
 				}
 			})
 		}
+	}
+
+	getTagsCharacterCount(): number {
+		let charCount = 0;
+
+		this.tagsInput.childNodes.forEach((tagInput: TagInput, index) => {
+			charCount += (tagInput.shadowRoot.getElementById("input") as HTMLInputElement).value.length;
+			if(index < this.tagsInput.childNodes.length - 1) {
+				charCount++;
+			}
+		});
+
+		return charCount;
 	}
 
 	connectedCallback() {
@@ -833,10 +851,14 @@ export class PostBox extends Card {
 		this.tagsInput.appendChild(firstTagInput);
 		this.appendChild(this.tagsInput);
 
-		this.characterCounter.innerText = `${this.postInput.value.length}/${charLimit}`;
+		this.characterCount = this.postInput.value.length + this.getTagsCharacterCount();
+
+		this.characterCounter.innerText = `${this.characterCount}/${charLimit}`;
 
 		this.postInput.addEventListener("input", (event) => {
 			const target = event.target as HTMLTextAreaElement;
+
+			this.characterCount = this.postInput.value.length + this.getTagsCharacterCount();
 
 			target.style.height = "auto";
 			target.style.height = `${target.scrollHeight}px`;
@@ -849,9 +871,9 @@ export class PostBox extends Card {
 				this.form.style.removeProperty("height");
 			}
 
-			this.characterCounter.innerText = `${target.value.length}/${charLimit}`;
+			this.characterCounter.innerText = `${this.characterCount}/${charLimit}`;
 
-			if(target.value === "" || target.value.length > charLimit) {
+			if(target.value === "" || this.characterCount > charLimit) {
 				this.postButton.disabled = true;
 			} else {
 				this.postButton.disabled = false;
