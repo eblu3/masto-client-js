@@ -1,6 +1,6 @@
 <template id="postbox">
 	<form id="form" action="" onsubmit="return false;">
-		<textarea id="post-input" placeholder="📝 What's up?"></textarea>
+		<div id="post-input" contenteditable="true" placeholder="📝 What's up?"></div>
 		<slot name="tags"></slot>
 		<div id="post-options">
 			<input type="file" multiple>

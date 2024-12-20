@@ -13,3 +13,13 @@ app-status {
 		transform: scale(1.05);
 	}
 } */
+
+#load-more-button {
+	display: block;
+
+	margin: auto;
+
+	width: 100%;
+	max-width: var(--max-item-width);
+	height: 4em;
+}

@@ -22,6 +22,8 @@ address {
 	display: flex;
 
 	margin-bottom: 1em;
+
+	font-style: normal;
 }
 
 #label {
@@ -70,6 +72,37 @@ main {
 	color: var(--accent-color-lighter);
 
 	border-color: var(--accent-color-lighter);
+}
+
+a.mention:not(.hashtag) {
+	display: inline-block;
+
+	margin: 0.25em;
+	padding: 0.5em;
+
+	max-width: 100%;
+
+	overflow-wrap: break-word;
+	
+	background-color: var(--accent-color-bg);
+
+	border-radius: var(--radius-small);
+}
+
+code {
+	display: inline-block;
+
+	margin: 0.25em;
+	padding: 0.5em;
+
+	max-width: 100%;
+
+	overflow-wrap: break-word;
+
+	color: white;
+	background-color: black;
+
+	border-radius: var(--radius-small);
 }
 
 #post-content {

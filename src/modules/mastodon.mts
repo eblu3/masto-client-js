@@ -502,6 +502,98 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 	}
 }
 
+/**
+ * Fetches the public timeline.
+ * @param token The user token. Required if the instance does not share a public timeline.
+ * @param local Shows only statuses from this instance. Defaults to false.
+ * @param remote Shows only statuses from other instances. Defaults to false.
+ * @param onlyMedia Shows only statuses that have attachments. Defaults to false.
+ * @param maxId Only returns statuses that were posted before the status with this ID.
+ * @param sinceId Only returns statuses that were posted after the status with this ID.
+ * @param minId Returns statuses that were posted immediately after the status with this ID.
+ * @param limit Sets the maximum number of statuses to get. Must be between 0 and 40. Defaults to 20.
+ * @returns An array of `Status` objects, or `null` if an error occurred.
+ */
+export async function getPublicTimeline(
+	token?: string,
+	local: boolean = false,
+	remote: boolean = false,
+	onlyMedia: boolean = false,
+	maxId?: string,
+	sinceId?: string,
+	minId?: string,
+	limit: number = 20
+): Promise<Status[]> | null {
+	let endpoint = new URL("/api/v1/timelines/public", instanceUrl);
+
+	// setting query parameters
+	if(local && !remote) {
+		endpoint.searchParams.set("local", "true");
+	} else if(remote && !local) {
+		endpoint.searchParams.set("remote", "true");
+	} else if(local && remote) {
+		console.warn("Specified both local and remote public timelines, fetching neither as a fallback.");
+	}
+
+	if(onlyMedia) {
+		endpoint.searchParams.set("only_media", "true");
+	}
+
+	if(maxId) {
+		endpoint.searchParams.set("max_id", maxId);
+	}
+	if(sinceId) {
+		endpoint.searchParams.set("since_id", sinceId);
+	}
+	if(minId) {
+		endpoint.searchParams.set("min_id", minId);
+	}
+
+	if(limit != 20) {
+		if(limit > 40) {
+			console.warn("Cannot return more than 40 results, defaulting to 20.");
+		} else if(limit <= 0) {
+			console.warn("Cannot return zero or a negative number of results, defaulting to 20.");
+		} else {
+			endpoint.searchParams.set("limit", limit.toString());
+		}
+	}
+
+	try {
+		let response;
+		if(token) {
+			response = await fetch(endpoint, {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(endpoint);
+		}
+
+		if(!response.ok) {
+			throw new Error(`Error fetching timeline: ${response.statusText}`);
+		}
+
+		const json = await response.json();
+
+		if("error" in json) {
+			throw new Error(`Error fetching timeline: ${json["error"]}`);
+		}
+
+		let processedStatuses: Status[] = [];
+
+		for(const status of json) {
+			processedStatuses.push(new Status(status));
+		}
+
+		return processedStatuses;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
 export async function getAccountTimeline(id: string, startAtId?: string): Promise<Status[]> | null {
 	console.log(`Fetching account ID ${id}'s timeline from instance ${instanceUrl}...`);
 	try {

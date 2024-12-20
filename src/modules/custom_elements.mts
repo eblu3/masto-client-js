@@ -1,5 +1,6 @@
 import * as mastodon from "./mastodon.mjs";
 import {instanceUrl, getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, charLimit} from "./masto_ts.mjs";
+import { token } from "../env.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -353,9 +354,14 @@ export class Status extends Card {
 				this.header.setLabel("💬 reply");
 			}
 
+			let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username;
+			if(status.account.locked) {
+				outDisplayName += " 🔒";
+			}
+
 			this.header.setProfileInfo(
 				status.account.avatar,
-				(status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username,
+				outDisplayName,
 				parseHandle(`@${status.account.acct}`),
 				localProfileUrl
 			);
@@ -556,6 +562,10 @@ export class Timeline extends HTMLElement {
 					this.addStatuses(data);
 				});
 				break;
+			case mastodon.Timelines.Public:
+				mastodon.getPublicTimeline(token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data) => {
+					this.addStatuses(data);
+				});
 			default:
 				mastodon.getTimeline(instanceUrl, mastodon.Timelines[type as keyof typeof mastodon.Timelines], undefined, undefined).then((data: any) => {
 					this.addStatuses(data);
@@ -692,7 +702,7 @@ export class TagInput extends HTMLElement {
 
 export class PostBox extends Card {
 	form: HTMLFormElement;
-	postInput: HTMLTextAreaElement;
+	postInput: HTMLDivElement;
 	tagsInput: HTMLDivElement;
 	characterCounter: HTMLParagraphElement;
 	postButton: HTMLButtonElement;
@@ -704,7 +714,7 @@ export class PostBox extends Card {
 	}
 
 	post() {
-		let postText = this.postInput.value;
+		let postText = this.postInput.innerText;
 		let tags = "";
 
 		this.tagsInput.childNodes.forEach((tagInput: TagInput, index) => {
@@ -724,7 +734,7 @@ export class PostBox extends Card {
 			}})
 			document.dispatchEvent(postSentEvent);
 
-			this.postInput.value = "";
+			this.postInput.innerText = "";
 			this.postButton.disabled = true;
 			this.characterCounter.innerText = `0/${charLimit}`;
 
@@ -766,7 +776,7 @@ export class PostBox extends Card {
 					}
 				}
 
-				this.characterCount = this.postInput.value.length + this.getTagsCharacterCount();
+				this.characterCount = this.postInput.innerText.length + this.getTagsCharacterCount();
 				this.characterCounter.innerText = `${this.characterCount}/${charLimit}`;
 			});
 
@@ -838,7 +848,7 @@ export class PostBox extends Card {
 		shadow.appendChild(postBoxTemplate.cloneNode(true));
 
 		this.form = shadow.getElementById("form") as HTMLFormElement;
-		this.postInput = shadow.getElementById("post-input") as HTMLTextAreaElement;
+		this.postInput = shadow.getElementById("post-input") as HTMLDivElement;
 		this.characterCounter = shadow.getElementById("character-counter") as HTMLParagraphElement;
 		this.postButton = shadow.getElementById("post-button") as HTMLButtonElement;
 		
@@ -851,19 +861,26 @@ export class PostBox extends Card {
 		this.tagsInput.appendChild(firstTagInput);
 		this.appendChild(this.tagsInput);
 
-		this.characterCount = this.postInput.value.length + this.getTagsCharacterCount();
+		this.characterCount = this.postInput.innerText.length + this.getTagsCharacterCount();
 
 		this.characterCounter.innerText = `${this.characterCount}/${charLimit}`;
 
 		this.postInput.addEventListener("input", (event) => {
-			const target = event.target as HTMLTextAreaElement;
+			const target = event.target as HTMLDivElement;
 
-			this.characterCount = this.postInput.value.length + this.getTagsCharacterCount();
+			if(target.innerText == "\n") {
+				target.innerText = "";
+			}
+			
+			console.log(target.innerText + " " + target.innerText.length);
+
+			this.characterCount = this.postInput.innerText.length + this.getTagsCharacterCount();
 
 			target.style.height = "auto";
 			target.style.height = `${target.scrollHeight}px`;
+			
 
-			if(target.value != "") {
+			if(target.innerText != "") {
 				this.form.style.maxWidth = "calc(var(--max-item-width) * 1.05)";
 				this.form.style.height = "auto";
 			} else {
@@ -873,7 +890,7 @@ export class PostBox extends Card {
 
 			this.characterCounter.innerText = `${this.characterCount}/${charLimit}`;
 
-			if(target.value === "" || this.characterCount > charLimit) {
+			if(target.innerText == "" || this.characterCount > charLimit) {
 				this.postButton.disabled = true;
 			} else {
 				this.postButton.disabled = false;
@@ -895,7 +912,7 @@ export class ReplyBox extends PostBox {
 	}
 
 	post() {
-		let postText = this.postInput.value;
+		let postText = this.postInput.innerText;
 		let tags = "";
 
 		this.tagsInput.childNodes.forEach((tagInput: TagInput, index) => {
