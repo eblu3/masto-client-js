@@ -1,4 +1,4 @@
-import { instanceUrl, token } from "./masto_ts.mjs";
+import * as env from "../env.mjs";
 
 // === ENUMS === //
 
@@ -176,6 +176,78 @@ export class Field {
 }
 
 /**
+ * Represents the software instance of Mastodon running on this domain.
+ */
+export class Instance {
+	/** The domain name of the instance. */
+	domain: string;
+	/** The title of the website. */
+	title: string;
+	/** The version of Mastodon installed on the instance. */
+	version: string;
+	/** The URL for the source code of the software running on this instance, in keeping with AGPL license requirements. */
+	sourceUrl: URL;
+	/** A short, plain-text description defined by the admin. */
+	description: string;
+	/** Usage data for this instance. */
+	usage: object;
+	/** An image used to represent this instance. */
+	thumbnail: object;
+	/** The list of available size variants for this instance configured icon. */
+	icon: InstanceIcon[];
+	/** Primary languages of the website and its staff. */
+	languages: Intl.Locale[];
+	/** Configured values and limits for this website. */
+	configuration: object;
+	/** Information about registering for this website. */
+	registrations: object;
+	/** Information about which version of the API is implemented by this server. It contains at least a `mastodon` attribute, and other implementations may have their own additional attributes. */
+	apiVersions: object;
+	/** Hints related to contacting a representative of the website. */
+	contact: object;
+	/** An itemized list of rules for this website. */
+	rules: Rule[];
+
+	constructor(data: any) {
+		this.domain = data["domain"];
+		this.title = data["title"];
+		this.version = data["version"];
+		this.sourceUrl = new URL(data["source_url"]);
+		this.description = data["description"];
+		this.usage = data["usage"];
+		this.thumbnail = data["thumbnail"];
+		this.icon = [];
+		for(const icn of data["icon"]) {
+			this.icon.push(new InstanceIcon(icn));
+		}
+		this.languages = [];
+		for(const lang of data["languages"]) {
+			this.languages.push(new Intl.Locale(lang));
+		}
+		this.configuration = data["configuration"];
+		this.registrations = data["registrations"];
+		this.apiVersions = data["api_versions"];
+		this.contact = data["contact"];
+		this.rules = [];
+		for(const rule of data["rules"]) {
+			this.rules.push(new Rule(rule));
+		}
+	}
+}
+
+export class InstanceIcon {
+	/** The URL of this icon. */
+	src: URL;
+	/** The size of this icon. */
+	size: string;
+
+	constructor(data: any) {
+		this.src = new URL(data["src"]);
+		this.size = data["size"];
+	}
+}
+
+/**
  * Represents a rich preview card that is generated using OpenGraph tags from a URL.
  */
 export class PreviewCard {
@@ -284,6 +356,24 @@ export class Role {
 		this.color = data["color"];
 		this.permissions = data["permissions"];
 		this.highlighted = data["highlighted"];
+	}
+}
+
+/**
+ * Represents a rule that server users should follow.
+ */
+export class Rule {
+	/** An identifier for the rule. */
+	id: string;
+	/** The rule to be followed. */
+	text: string;
+	/** Longer-form description of the rule. */
+	hint: string;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.text = data["text"];
+		this.hint = data["hint"];
 	}
 }
 
@@ -453,7 +543,7 @@ export class MediaAttachment {
 
 // === API METHODS === //
 
-// == GET == //
+// == TIMELINES == //
 
 export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string): Promise<Status[]> | null {
 	let newEndpoint: string = endpoint;
@@ -470,13 +560,13 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 		if (startAtId) {
 			response = await fetch(new URL(`${newEndpoint}?max_id=${startAtId}`, url), {
 				headers: {
-					"Authorization": `Bearer ${token}`
+					"Authorization": `Bearer ${env.token}`
 				}
 			});
 		} else {
 			response = await fetch(new URL(newEndpoint, url), {
 				headers: {
-					"Authorization": `Bearer ${token}`
+					"Authorization": `Bearer ${env.token}`
 				}
 			});
 		}
@@ -524,7 +614,7 @@ export async function getPublicTimeline(
 	minId?: string,
 	limit: number = 20
 ): Promise<Status[]> | null {
-	let endpoint = new URL("/api/v1/timelines/public", instanceUrl);
+	let endpoint = new URL("/api/v1/timelines/public", env.instanceUrl);
 
 	// setting query parameters
 	if(local && !remote) {
@@ -624,7 +714,7 @@ export async function getHashtagTimeline(
 	minId?: string,
 	limit: number = 20
 ): Promise<Status[]> | null {
-	let endpoint = new URL(`/api/v1/timelines/tag/${hashtag}`, instanceUrl);
+	let endpoint = new URL(`/api/v1/timelines/tag/${hashtag}`, env.instanceUrl);
 
 	if(any) {
 		for(const tag of any) {
@@ -727,7 +817,7 @@ export async function getHomeTimeline(
 	minId?: string,
 	limit: number = 20
 ): Promise<Status[]> | null {
-	let endpoint = new URL("/api/v1/timelines/home", instanceUrl);
+	let endpoint = new URL("/api/v1/timelines/home", env.instanceUrl);
 
 	if(maxId) {
 		endpoint.searchParams.set("max_id", maxId);
@@ -780,29 +870,29 @@ export async function getHomeTimeline(
 }
 
 export async function getAccountTimeline(id: string, startAtId?: string): Promise<Status[]> | null {
-	console.log(`Fetching account ID ${id}'s timeline from instance ${instanceUrl}...`);
+	console.log(`Fetching account ID ${id}'s timeline from instance ${env.instanceUrl}...`);
 	try {
 		let response;
 
-		if (token) {
+		if (env.token) {
 			if (startAtId) {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, instanceUrl), {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, env.instanceUrl), {
 					headers: {
-						"Authorization": `Bearer ${token}`
+						"Authorization": `Bearer ${env.token}`
 					}
 				});
 			} else {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl), {
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, env.instanceUrl), {
 					headers: {
-						"Authorization": `Bearer ${token}`
+						"Authorization": `Bearer ${env.token}`
 					}
 				});
 			}
 		} else {
 			if (startAtId) {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, instanceUrl));
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, env.instanceUrl));
 			} else {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl));
+				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, env.instanceUrl));
 			}
 		}
 
@@ -831,14 +921,14 @@ export async function getStatus(id: string): Promise<[Status, boolean, Account]>
 	try {
 		let response;
 
-		if (token) {
-			response = await fetch(new URL(`/api/v1/statuses/${id}`, instanceUrl), {
+		if (env.token) {
+			response = await fetch(new URL(`/api/v1/statuses/${id}`, env.instanceUrl), {
 				headers: {
-					"Authorization": `Bearer ${token}`
+					"Authorization": `Bearer ${env.token}`
 				}
 			});
 		} else {
-			response = await fetch(new URL(`/api/v1/statuses/${id}`, instanceUrl));
+			response = await fetch(new URL(`/api/v1/statuses/${id}`, env.instanceUrl));
 		}
 
 		if (!response.ok) {
@@ -858,14 +948,14 @@ export async function getAccount(id: string): Promise<Account> | null {
 	try {
 		let response;
 
-		if (token) {
-			response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl), {
+		if (env.token) {
+			response = await fetch(new URL(`/api/v1/accounts/${id}`, env.instanceUrl), {
 				headers: {
-					"Authorization": `Bearer ${token}`
+					"Authorization": `Bearer ${env.token}`
 				}
 			});
 		} else {
-			response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
+			response = await fetch(new URL(`/api/v1/accounts/${id}`, env.instanceUrl));
 		}
 
 		if (!response.ok) {
@@ -885,14 +975,14 @@ export async function getAccountByHandle(acct: string) {
 	try {
 		let response;
 
-		if (token) {
-			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl), {
+		if (env.token) {
+			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, env.instanceUrl), {
 				headers: {
-					"Authorization": `Bearer ${token}`
+					"Authorization": `Bearer ${env.token}`
 				}
 			});
 		} else {
-			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, instanceUrl));
+			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, env.instanceUrl));
 		}
 
 		if (!response.ok) {
@@ -910,9 +1000,9 @@ export async function getAccountByHandle(acct: string) {
 
 export async function getCurrentAccount(): Promise<CredentialAccount> | null {
 	try {
-		let response = await fetch(new URL("/api/v1/accounts/verify_credentials", instanceUrl), {
+		let response = await fetch(new URL("/api/v1/accounts/verify_credentials", env.instanceUrl), {
 			headers: {
-				"Authorization": `Bearer ${token}`
+				"Authorization": `Bearer ${env.token}`
 			}
 		});
 
@@ -950,10 +1040,10 @@ export async function postStatus(
 			params.append("in_reply_to_id", inReplyToId);
 		}
 
-		let response = await fetch(new URL(`/api/v1/statuses?${params.toString()}`, instanceUrl), {
+		let response = await fetch(new URL(`/api/v1/statuses?${params.toString()}`, env.instanceUrl), {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${token}`
+				"Authorization": `Bearer ${env.token}`
 			}
 		});
 
@@ -973,10 +1063,10 @@ export async function postStatus(
 export async function favoriteStatus(id: string): Promise<Status> | null {
 	console.log(`Favoriting status ${id}...`);
 	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/favourite`, instanceUrl), {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/favourite`, env.instanceUrl), {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${token}`
+				"Authorization": `Bearer ${env.token}`
 			}
 		});
 
@@ -996,10 +1086,10 @@ export async function favoriteStatus(id: string): Promise<Status> | null {
 export async function unfavoriteStatus(id: string): Promise<Status> | null {
 	console.log(`Removing favorite from status ${id}...`);
 	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/unfavourite`, instanceUrl), {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/unfavourite`, env.instanceUrl), {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${token}`
+				"Authorization": `Bearer ${env.token}`
 			}
 		});
 
@@ -1020,10 +1110,10 @@ export async function unfavoriteStatus(id: string): Promise<Status> | null {
 export async function boostStatus(id: string, visibility?: string): Promise<Status> | null {
 	console.log(`Boosting status ${id}...`);
 	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/reblog`, instanceUrl), {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/reblog`, env.instanceUrl), {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${token}`
+				"Authorization": `Bearer ${env.token}`
 			}
 		});
 
@@ -1042,10 +1132,10 @@ export async function boostStatus(id: string, visibility?: string): Promise<Stat
 export async function unboostStatus(id: String): Promise<Status> | null {
 	console.log(`Removing boost from status ${id}...`);
 	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/unreblog`, instanceUrl), {
+		let response = await fetch(new URL(`/api/v1/statuses/${id}/unreblog`, env.instanceUrl), {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${token}`
+				"Authorization": `Bearer ${env.token}`
 			}
 		});
 
@@ -1062,3 +1152,19 @@ export async function unboostStatus(id: String): Promise<Status> | null {
 	}
 }
 
+// == INSTANCE == //
+
+export async function getServerInformation(instanceUrl: URL): Promise<Instance> | null {
+	try {
+		const response = await fetch(new URL("/api/v2/instance", instanceUrl));
+
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		return new Instance(await response.json());
+	} catch (error) {
+		console.error(error.message);
+		return null;
+	}
+}
