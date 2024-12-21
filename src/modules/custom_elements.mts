@@ -558,14 +558,20 @@ export class Timeline extends HTMLElement {
 				});
 				break;
 			case mastodon.Timelines.Hashtag:
-				mastodon.getTimeline(instanceUrl, mastodon.Timelines.Hashtag, value, this.#lastPostId).then((data: any) => {
+				mastodon.getHashtagTimeline(value, token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
 			case mastodon.Timelines.Public:
-				mastodon.getPublicTimeline(token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data) => {
+				mastodon.getPublicTimeline(token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
+				break;
+			case mastodon.Timelines.Home:
+				mastodon.getHomeTimeline(token, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+					this.addStatuses(data);
+				});
+				break;
 			default:
 				mastodon.getTimeline(instanceUrl, mastodon.Timelines[type as keyof typeof mastodon.Timelines], undefined, undefined).then((data: any) => {
 					this.addStatuses(data);

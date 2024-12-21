@@ -594,6 +594,191 @@ export async function getPublicTimeline(
 	}
 }
 
+/**
+ * Gets all statuses with the specified hashtag(s).
+ * @param hashtag The hashtag to search for.
+ * @param token The user token.
+ * @param any Additional hashtags to include in the search.
+ * @param all Specifies all hashtags that search results must contain.
+ * @param none Hashtags to exclude from the search.
+ * @param local Shows only statuses from this instance. Defaults to false.
+ * @param remote Shows only statuses from other instances. Defaults to false.
+ * @param onlyMedia Shows only statuses that have attachments. Defaults to false.
+ * @param maxId Only returns statuses that were posted before the status with this ID.
+ * @param sinceId Only returns statuses that were posted after the status with this ID.
+ * @param minId Returns statuses that were posted immediately after the status with this ID.
+ * @param limit Sets the maximum number of statuses to get. Must be between 0 and 40. Defaults to 20.
+ * @returns An array of `Status` objects, or `null` if an error occurred.
+ */
+export async function getHashtagTimeline(
+	hashtag: string,
+	token?: string,
+	any?: string[],
+	all?: string[],
+	none?: string[],
+	local: boolean = false,
+	remote: boolean = false,
+	onlyMedia: boolean = false,
+	maxId?: string,
+	sinceId?: string,
+	minId?: string,
+	limit: number = 20
+): Promise<Status[]> | null {
+	let endpoint = new URL(`/api/v1/timelines/tag/${hashtag}`, instanceUrl);
+
+	if(any) {
+		for(const tag of any) {
+			endpoint.searchParams.append("any", tag);
+		}
+	}
+	if(all) {
+		for(const tag of all) {
+			endpoint.searchParams.append("all", tag);
+		}
+	}
+	if(none) {
+		for(const tag of none) {
+			endpoint.searchParams.append("none", tag);
+		}
+	}
+
+	/* everything below here is reused from the public timeline getter.
+	   let's try optimizing this eventually */
+	if(local && !remote) {
+		endpoint.searchParams.set("local", "true");
+	} else if(remote && !local) {
+		endpoint.searchParams.set("remote", "true");
+	} else if(local && remote) {
+		console.warn("Specified both local and remote tag timelines, fetching neither as a fallback.");
+	}
+
+	if(onlyMedia) {
+		endpoint.searchParams.set("only_media", "true");
+	}
+
+	if(maxId) {
+		endpoint.searchParams.set("max_id", maxId);
+	}
+	if(sinceId) {
+		endpoint.searchParams.set("since_id", sinceId);
+	}
+	if(minId) {
+		endpoint.searchParams.set("min_id", minId);
+	}
+
+	if(limit != 20) {
+		if(limit > 40) {
+			console.warn("Cannot return more than 40 results, defaulting to 20.");
+		} else if(limit <= 0) {
+			console.warn("Cannot return zero or a negative number of results, defaulting to 20.");
+		} else {
+			endpoint.searchParams.set("limit", limit.toString());
+		}
+	}
+
+	try {
+		let response;
+		if(token) {
+			response = await fetch(endpoint, {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(endpoint);
+		}
+
+		if(!response.ok) {
+			throw new Error(`Error fetching timeline: ${response.statusText}`);
+		}
+
+		const json = await response.json();
+
+		if("error" in json) {
+			throw new Error(`Error fetching timeline: ${json["error"]}`);
+		}
+
+		let processedStatuses: Status[] = [];
+
+		for(const status of json) {
+			processedStatuses.push(new Status(status));
+		}
+
+		return processedStatuses;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+/**
+ * Gets the statuses in the user's home timeline.
+ * @param token The user token.
+ * @param maxId Only returns statuses that were posted before the status with this ID.
+ * @param sinceId Only returns statuses that were posted after the status with this ID.
+ * @param minId Returns statuses that were posted immediately after the status with this ID.
+ * @param limit Sets the maximum number of statuses to get. Must be between 0 and 40. Defaults to 20.
+ * @returns An array of `Status` objects, or `null` if an error occurred.
+ */
+export async function getHomeTimeline(
+	token: string,
+	maxId?: string,
+	sinceId?: string,
+	minId?: string,
+	limit: number = 20
+): Promise<Status[]> | null {
+	let endpoint = new URL("/api/v1/timelines/home", instanceUrl);
+
+	if(maxId) {
+		endpoint.searchParams.set("max_id", maxId);
+	}
+	if(sinceId) {
+		endpoint.searchParams.set("since_id", sinceId);
+	}
+	if(minId) {
+		endpoint.searchParams.set("min_id", minId);
+	}
+
+	if(limit != 20) {
+		if(limit > 40) {
+			console.warn("Cannot return more than 40 results, defaulting to 20.");
+		} else if(limit <= 0) {
+			console.warn("Cannot return zero or a negative number of results, defaulting to 20.");
+		} else {
+			endpoint.searchParams.set("limit", limit.toString());
+		}
+	}
+
+	try {
+		const response = await fetch(endpoint, {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Error fetching timeline: ${response.statusText}`);
+		}
+
+		const json = await response.json();
+
+		if("error" in json) {
+			throw new Error(`Error fetching timeline: ${json["error"]}`);
+		}
+
+		let processedStatuses: Status[] = [];
+
+		for(const status of json) {
+			processedStatuses.push(new Status(status));
+		}
+
+		return processedStatuses;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
 export async function getAccountTimeline(id: string, startAtId?: string): Promise<Status[]> | null {
 	console.log(`Fetching account ID ${id}'s timeline from instance ${instanceUrl}...`);
 	try {
