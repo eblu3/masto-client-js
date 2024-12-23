@@ -100,12 +100,6 @@ a:hover {
 	color: var(--accent-color-lighter);
 }
 
-button {
-	padding: 0.5em;
-	
-	border-radius: var(--radius-small);
-}
-
 body > header {
 	grid-area: header;
 

@@ -952,6 +952,55 @@ export class ReplyBox extends PostBox {
 	}
 }
 
+export class HomeView extends HTMLElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		
+		const homeTimelineObject = new Timeline();
+		homeTimelineObject.setAttribute("type", mastodon.Timelines.Home);
+
+		shadow.appendChild(homeTimelineObject);
+	}
+}
+
+export class PublicTimelineView extends HTMLElement {
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+
+		const publicTimelineObject = new Timeline();
+		publicTimelineObject.setAttribute("type", mastodon.Timelines.Public);
+
+		shadow.appendChild(publicTimelineObject);
+	}
+}
+
+export class AccountView extends HTMLElement {
+	profileHeader: ProfileHeader;
+	accountTimeline: Timeline;
+
+	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+
+		this.profileHeader = new ProfileHeader();
+		this.accountTimeline = new Timeline();
+		
+		shadow.appendChild(this.profileHeader);
+		shadow.appendChild(this.accountTimeline);
+	}
+}
+
 async function getStylesheet(url: string): Promise<CSSStyleSheet> {
 	const stylesheet = new CSSStyleSheet();
 	const response = await fetch(url);
@@ -998,7 +1047,7 @@ function initComponents() {
 	initTemplates().then(() => {
 		initStylesheets().then(() => {
 			customElements.define("app-card", Card);
-			customElements.define("app-profile-header", ProfileHeader, {extends: "address"});
+			customElements.define("app-profile-header", ProfileHeader);
 
 			customElements.define("app-status-header", StatusHeader, {extends: "header"});
 			customElements.define("app-status-footer", StatusFooter, {extends: "footer"});
@@ -1014,6 +1063,10 @@ function initComponents() {
 			customElements.define("app-tag-input", TagInput);
 			customElements.define("app-post-box", PostBox);
 			customElements.define("app-reply-box", ReplyBox);
+
+			customElements.define("app-view-home", HomeView);
+			customElements.define("app-view-public", PublicTimelineView);
+			customElements.define("app-view-account", AccountView);
 		});
 	});
 }
