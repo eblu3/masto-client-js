@@ -10,6 +10,11 @@ export enum AttachmentType {
 	Audio = "audio"
 }
 
+export enum DomainBlockSeverity {
+	Silence = "silence",
+	Suspend = "suspend"
+}
+
 export enum PreviewCardType {
 	Link = "link",
 	Photo = "photo",
@@ -122,6 +127,21 @@ export class Account {
 	}
 }
 
+export class Field {
+	/** The key of a given field's key-value pair. */
+	name: string;
+	/** The value associated with the `name` key. */
+	value: string;
+	/** Timestamp of when the server verified a URL value for a rel="me" link. */
+	verifiedAt?: Date;
+
+	constructor(data: any) {
+		this.name = data["name"];
+		this.value = data["value"];
+		this.verifiedAt = data["verified_at"] ? new Date(data["verified_at"]) : null;
+	}
+}
+
 export class CredentialAccount extends Account {
 	/** An extra attribute that contains source values to be used with API methods that [verify credentials](https://docs.joinmastodon.org/methods/accounts/#verify_credentials) and [update credentials](https://docs.joinmastodon.org/methods/accounts/#update_credentials). */
 	source: object;
@@ -133,6 +153,87 @@ export class CredentialAccount extends Account {
 
 		this.source = data["source"];
 		this.role = data["role"];
+	}
+}
+
+export class Announcement {
+	id: string;
+	content: DocumentFragment;
+	startsAt: Date | null;
+	endsAt: Date | null;
+	published: boolean;
+	allDay: boolean;
+	publishedAt: Date;
+	updatedAt: Date;
+	read?: boolean;
+	mentions: AnnouncementAccount[];
+	statuses: AnnouncementStatus[];
+	tags: StatusTag[];
+	emojis: CustomEmoji[];
+	reactions: Reaction[];
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.content = new DOMParser().parseFromString(data["content"], "text/html");
+		try {
+			this.startsAt = new Date(data["starts_at"]);
+		} catch {
+			this.startsAt = null;
+		}
+		try {
+			this.endsAt = new Date(data["ends_at"]);
+		} catch {
+			this.endsAt = null;
+		}
+		this.published = data["published"];
+		this.allDay = data["all_day"];
+		this.publishedAt = new Date(data["published_at"]);
+		this.updatedAt = new Date(data["updated_at"]);
+		this.read = data["read"] ?? undefined;
+		this.mentions = [];
+		for(const mention of data["mentions"]) {
+			this.mentions.push(new AnnouncementAccount(mention));
+		}
+		this.statuses = [];
+		for(const status of data["statuses"]) {
+			this.statuses.push(new AnnouncementStatus(status));
+		}
+		this.tags = [];
+		for(const tag of data["tags"]) {
+			this.tags.push(new StatusTag(tag));
+		}
+		this.emojis = [];
+		for(const emoji of data["emojis"]) {
+			this.emojis.push(new CustomEmoji(emoji));
+		}
+		this.reactions = [];
+		for(const reaction of data["reactions"]) {
+			this.reactions.push(new Reaction(reaction));
+		}
+	}
+}
+
+export class AnnouncementAccount {
+	id: string;
+	username: string;
+	url: URL;
+	acct: string;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.username = data["username"];
+		this.url = new URL(data["url"]);
+		this.acct = data["acct"];
+	}
+}
+
+export class AnnouncementStatus {
+	id: string;
+	url: URL;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.url = new URL(data["url"]);
 	}
 }
 
@@ -160,18 +261,27 @@ export class CustomEmoji {
 	}
 }
 
-export class Field {
-	/** The key of a given field's key-value pair. */
-	name: string;
-	/** The value associated with the `name` key. */
-	value: string;
-	/** Timestamp of when the server verified a URL value for a rel="me" link. */
-	verifiedAt?: Date;
+export class DomainBlock {
+	domain: string;
+	digest: string;
+	severity: DomainBlockSeverity;
+	comment?: string;
 
 	constructor(data: any) {
-		this.name = data["name"];
-		this.value = data["value"];
-		this.verifiedAt = data["verified_at"] ? new Date(data["verified_at"]) : null;
+		this.domain = data["domain"];
+		this.digest = data["digest"];
+		this.severity = data["severity"];
+		this.comment = data["comment"] ?? undefined;
+	}
+}
+
+export class ExtendedDescription {
+	updatedAt: Date;
+	content: DocumentFragment;
+
+	constructor(data: any) {
+		this.updatedAt = new Date(data["updated_at"]);
+		this.content = new DOMParser().parseFromString(data["content"], "text/html");
 	}
 }
 
@@ -247,6 +357,44 @@ export class InstanceIcon {
 	}
 }
 
+export class MediaAttachment {
+	/** The ID of the attachment in the database. */
+	id: string;
+	/** The type of the attachment. */
+	type: AttachmentType;
+	/** The location of the original full-size attachment. */
+	url: URL;
+	/** The location of a scaled-down preview of the attachment. */
+	previewUrl: URL | null;
+	/** The location of the full-size original attachment on the remote website. */
+	remoteUrl: URL | null;
+	/** Metadata returned by Paperclip. */
+	meta: object;
+	/** Alternate text that describes what is in the media attachment, to be used for the visually impaired or when media attachments do not load. */
+	description: string | null;
+	/** A hash computed by [the BlurHash algorithm](https://github.com/woltapp/blurhash), for generating colorful preview thumbnails when media has not been downloaded yet. */
+	blurhash: string | null;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.type = data["type"];
+		this.url = new URL(data["url"]);
+		try {
+			this.previewUrl = new URL(data["preview_url"]);
+		} catch {
+			this.previewUrl = null;
+		}
+		try {
+			this.remoteUrl = new URL(data["remote_url"]);
+		} catch {
+			this.remoteUrl = null;
+		}
+		this.meta = data["meta"];
+		this.description = data["description"];
+		this.blurhash = data["blurhash"];
+	}
+}
+
 /**
  * Represents a rich preview card that is generated using OpenGraph tags from a URL.
  */
@@ -313,6 +461,23 @@ export class PreviewCard {
 	}
 }
 
+export class TrendsLink extends PreviewCard {
+	history: object[];
+
+	constructor(data: any) {
+		super(data);
+
+		this.history = [];
+		for(const historyObject of data["history"]) {
+			this.history.push({
+				day: new Date(Number(historyObject["day"])*1000),
+				accounts: Number(historyObject["accounts"]),
+				uses: Number(historyObject["uses"])
+			});
+		}
+	}
+}
+
 /**
  * Represents an author in a rich preview card.
  */
@@ -331,6 +496,30 @@ export class PreviewCardAuthor {
 			this.account = new Account(data["account"]);
 		} catch {
 			this.account = null;
+		}
+	}
+}
+
+export class Reaction {
+	name: string;
+	count: number;
+	me?: boolean;
+	url?: URL;
+	staticUrl?: URL;
+
+	constructor(data: any) {
+		this.name = data["name"];
+		this.count = data["count"];
+		this.me = data["me"] ?? undefined;
+		try {
+			this.url = new URL(data["url"]);
+		} catch {
+			this.url = undefined;
+		}
+		try {
+			this.staticUrl = new URL(data["static_url"]);
+		} catch {
+			this.staticUrl = undefined;
 		}
 	}
 }
@@ -503,41 +692,64 @@ export class Status {
 	}
 }
 
-export class MediaAttachment {
-	/** The ID of the attachment in the database. */
+export class StatusMention {
 	id: string;
-	/** The type of the attachment. */
-	type: AttachmentType;
-	/** The location of the original full-size attachment. */
+	username: string;
 	url: URL;
-	/** The location of a scaled-down preview of the attachment. */
-	previewUrl: URL | null;
-	/** The location of the full-size original attachment on the remote website. */
-	remoteUrl: URL | null;
-	/** Metadata returned by Paperclip. */
-	meta: object;
-	/** Alternate text that describes what is in the media attachment, to be used for the visually impaired or when media attachments do not load. */
-	description: string | null;
-	/** A hash computed by [the BlurHash algorithm](https://github.com/woltapp/blurhash), for generating colorful preview thumbnails when media has not been downloaded yet. */
-	blurhash: string | null;
+	acct: string;
 
 	constructor(data: any) {
 		this.id = data["id"];
-		this.type = data["type"];
+		this.username = data["username"];
 		this.url = new URL(data["url"]);
-		try {
-			this.previewUrl = new URL(data["preview_url"]);
-		} catch {
-			this.previewUrl = null;
+		this.acct = data["acct"];
+	}
+}
+
+export class StatusTag {
+	name: string;
+	url: URL;
+
+	constructor(data: any) {
+		this.name = data["name"];
+		this.url = new URL(data["url"]);
+	}
+}
+
+export class Tag {
+	name: string;
+	url: URL;
+	history: object[];
+	following?: boolean;
+
+	constructor(data: any) {
+		this.name = data["name"];
+		this.url = new URL(data["url"]);
+		this.history = [];
+		for(const historyObject of data["history"]) {
+			this.history.push({
+				day: new Date(Number(historyObject["day"])*1000),
+				uses: Number(historyObject["uses"]),
+				accounts: Number(historyObject["accounts"])
+			});
 		}
-		try {
-			this.remoteUrl = new URL(data["remote_url"]);
-		} catch {
-			this.remoteUrl = null;
-		}
-		this.meta = data["meta"];
-		this.description = data["description"];
-		this.blurhash = data["blurhash"];
+		this.following = data["following"] ?? undefined;
+	}
+}
+
+export class AdminTag extends Tag {
+	id: string;
+	trendable: boolean;
+	usable: boolean;
+	requiresReview: boolean;
+
+	constructor(data: any) {
+		super(data);
+
+		this.id = data["id"];
+		this.trendable = data["trendable"];
+		this.usable = data["usable"];
+		this.requiresReview = data["requires_review"];
 	}
 }
 
@@ -1167,4 +1379,372 @@ export async function getServerInformation(instanceUrl: URL): Promise<Instance> 
 		console.error(error.message);
 		return null;
 	}
+}
+
+/**
+ * Queries an instance to get what domains that it is aware of.
+ * @param instanceUrl The URL of the instance to query.
+ * @param token The token of a logged in user. Required if this instance is in whitelist mode.
+ * @returns An array of strings representing the domains that the instance is aware of, or `null` if there was an error.
+ */
+export async function getConnectedDomains(instanceUrl: URL, token?: string): Promise<string[]> | null {
+	try {
+		let response;
+
+		if(token) {
+			response = await fetch(new URL("/api/v1/instance/peers", instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL("/api/v1/instance/peers", instanceUrl));
+		}
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		return await response.json();
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getWeeklyActivity(instanceUrl: URL, token?: string): Promise<object[]> | null {
+	try {
+		let response;
+
+		if(token) {
+			response = await fetch(new URL("/api/v1/instance/activity", instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL("/api/v1/instance/activity", instanceUrl));
+		}
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: object[] = [];
+
+		for(const hash of json) {
+			out.push({
+				week: new Date(Number(hash["week"])*1000),
+				statuses: hash["statuses"],
+				logins: hash["logins"],
+				registrations: hash["registrations"]
+			});
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getRules(instanceUrl: URL): Promise<Rule[]> | null {
+	try {
+		const response = await fetch(new URL("/api/v1/instance/rules", instanceUrl));
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		return await response.json();
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getModeratedServers(instanceUrl: URL, token?: string): Promise<DomainBlock[]> | null {
+	try {
+		let response;
+
+		if(token) {
+			response = await fetch(new URL("/api/v1/instance/domain_blocks", instanceUrl), {
+				headers: {
+					"Authorization": `Bearer ${token}`
+				}
+			});
+		} else {
+			response = await fetch(new URL("/api/v1/instance/domain_blocks", instanceUrl));
+		}
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: DomainBlock[] = [];
+
+		for(const blockObject of json) {
+			out.push(new DomainBlock(blockObject));
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getExtendedDescription(instanceUrl: URL): Promise<ExtendedDescription> | null {
+	try {
+		const response = await fetch(new URL("/api/v1/instance/extended_description", instanceUrl));
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		return new ExtendedDescription(await response.json());
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getTranslationLanguages(instanceUrl: URL): Promise<object> | null {
+	try {
+		const response = await fetch(new URL("/api/v1/instance/translation_languages", instanceUrl));
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		return await response.json();
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+// = INSTANCE/TRENDS = //
+
+export async function getTrendingTags(instanceUrl: URL, limit: number = 10, offset?: number): Promise<Tag[]> | null {
+	try {
+		const endpoint = new URL("/api/v1/trends/tags", instanceUrl);
+
+		if(limit != 10) {
+			endpoint.searchParams.set("limit", String(limit));
+		}
+
+		if(offset) {
+			endpoint.searchParams.set("offset", String(offset));
+		}
+
+		const response = await fetch(endpoint);
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: Tag[] = [];
+
+		for(const tag of json) {
+			out.push(new Tag(tag));
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getTrendingStatuses(instanceUrl: URL, limit: number = 10, offset?: number): Promise<Status[]> | null {
+	try {
+		const endpoint = new URL("/api/v1/trends/statuses", instanceUrl);
+
+		if(limit != 10) {
+			endpoint.searchParams.set("limit", String(limit));
+		}
+
+		if(offset) {
+			endpoint.searchParams.set("offset", String(offset));
+		}
+
+		const response = await fetch(endpoint);
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: Status[] = [];
+
+		for(const status of json) {
+			out.push(new Status(status));
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function getTrendingLinks(instanceUrl: URL, limit: number = 10, offset?: number): Promise<TrendsLink[]> | null {
+	try {
+		const endpoint = new URL("/api/v1/trends/links", instanceUrl);
+
+		if(limit != 10) {
+			endpoint.searchParams.set("limit", String(limit));
+		}
+
+		if(offset) {
+			endpoint.searchParams.set("offset", String(offset));
+		}
+
+		const response = await fetch(endpoint);
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: TrendsLink[] = [];
+
+		for(const link of json) {
+			out.push(new TrendsLink(link));
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+// = INSTANCE/DIRECTORY = //
+
+export async function getProfileDirectory(instanceUrl: URL, offset?: number, limit: number = 40, order: string = "active", local?: boolean): Promise<Account[]> | null {
+	const endpoint = new URL("/api/v1/directory", instanceUrl);
+
+	if(offset) {
+		endpoint.searchParams.set("offset", String(offset));
+	}
+	if(limit != 40) {
+		if(limit > 0 && limit <= 80) {
+			endpoint.searchParams.set("limit", String(limit));
+		} else {
+			console.warn("Limit out of bounds, defaulting to 40");
+		}
+	}
+	if(order === "new") {
+		endpoint.searchParams.set("order", order);
+	} else if(order !== "active") {
+		console.warn("Order not set to \"active\" or \"new\", defaulting to active");
+	}
+	if(local != undefined) {
+		endpoint.searchParams.set("local", String(local));
+	}
+
+
+	try {
+		const response = await fetch(endpoint);
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: Account[] = [];
+
+		for(const account of json) {
+			out.push(new Account(account));
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+// = INSTANCE/CUSTOM EMOJIS = //
+
+export async function getCustomEmojis(instanceUrl: URL): Promise<CustomEmoji[]> | null {
+	try {
+		const response = await fetch(new URL("/api/v1/custom_emojis", instanceUrl));
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: CustomEmoji[] = [];
+
+		for(const emoji of json) {
+			out.push(new CustomEmoji(emoji));
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+// = INSTANCE/ANNOUNCEMENTS = //
+
+export async function getAnnouncements(instanceUrl: URL, token: string): Promise<Announcement[]> | null {
+	try {
+		const response = await fetch(new URL("/api/v1/announcements", instanceUrl), {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+
+		if(!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
+
+		const json = await response.json();
+		const out: Announcement[] = [];
+
+		for(const announcement of json) {
+			out.push(announcement);
+		}
+
+		return out;
+	} catch(error) {
+		console.error(error.message);
+		return null;
+	}
+}
+
+export async function dismissAnnouncement(instanceUrl: URL, id: string, token: string) {
+	await fetch(new URL(`/api/v1/announcements/${id}/dismiss`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+}
+
+export async function reactToAnnouncement(instanceUrl: URL, id: string, emojiName: string, token: string) {
+	await fetch(new URL(`/api/v1/announcements/${id}/reactions/${emojiName}`, instanceUrl), {
+		method: "PUT",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+}
+
+export async function removeReactionFromAnnouncement(instanceUrl: URL, id: string, emojiName: string, token: string) {
+	await fetch(new URL(`/api/v1/announcements/${id}/reactions/${emojiName}`, instanceUrl), {
+		method: "DELETE",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
 }
