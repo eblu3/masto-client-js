@@ -139,15 +139,13 @@ export class StatusHeader extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
-		shadow.appendChild(statusHeaderTemplate.cloneNode(true));
+		this.appendChild(statusHeaderTemplate.cloneNode(true));
 
-		this.#label = shadow.getElementById("label") as HTMLParagraphElement;
-		this.#avatar = shadow.getElementById("avatar") as HTMLImageElement;
-		this.#displayName = shadow.getElementById("display-name");
-		this.#handle = shadow.getElementById("acct");
-		this.#profileLink = shadow.getElementById("profile-link") as HTMLAnchorElement;
+		this.#label = this.querySelector("#label") as HTMLParagraphElement;
+		this.#avatar = this.querySelector("#avatar") as HTMLImageElement;
+		this.#displayName = this.querySelector("#display-name");
+		this.#handle = this.querySelector("#acct");
+		this.#profileLink = this.querySelector("#profile-link") as HTMLAnchorElement;
 	}
 }
 
@@ -213,13 +211,11 @@ export class StatusFooter extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
-		shadow.appendChild(statusFooterTemplate.cloneNode(true));
+		this.appendChild(statusFooterTemplate.cloneNode(true));
 
-		this.#replyButton = shadow.getElementById("reply-button") as HTMLButtonElement;
-		this.#boostButton = shadow.getElementById("boost-button") as HTMLButtonElement;
-		this.#favoriteButton = shadow.getElementById("favorite-button") as HTMLButtonElement;
+		this.#replyButton = this.querySelector("#reply-button") as HTMLButtonElement;
+		this.#boostButton = this.querySelector("#boost-button") as HTMLButtonElement;
+		this.#favoriteButton = this.querySelector("#favorite-button") as HTMLButtonElement;
 		
 		this.#boostButton.addEventListener("click", (event) => {
 			if(this.#statusId) {
@@ -295,12 +291,10 @@ export class StatusContent extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
-		shadow.appendChild(statusContentTemplate.cloneNode(true));
+		this.appendChild(statusContentTemplate.cloneNode(true));
 
-		this.postContent = shadow.getElementById("post-content") as HTMLDivElement;
-		this.attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
+		this.postContent = this.querySelector("#post-content") as HTMLDivElement;
+		this.attachmentContainer = this.querySelector("#post-attachments") as HTMLDivElement;
 	}
 }
 
@@ -316,13 +310,11 @@ export class StatusContentWarned extends StatusContent {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
-		shadow.appendChild(statusContentWarnedTemplate.cloneNode(true));
+		this.appendChild(statusContentWarnedTemplate.cloneNode(true));
 
-		this.postContent = shadow.getElementById("post-content") as HTMLDivElement;
-		this.attachmentContainer = shadow.getElementById("post-attachments") as HTMLDivElement;
-		this.#contentWarning = shadow.getElementById("cw");
+		this.postContent = this.querySelector("#post-content") as HTMLDivElement;
+		this.attachmentContainer = this.querySelector("#post-attachments") as HTMLDivElement;
+		this.#contentWarning = this.querySelector("#cw");
 	}
 }
 
@@ -355,9 +347,6 @@ export class Status extends Card {
 			}
 
 			let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username;
-			if(status.account.locked) {
-				outDisplayName += " 🔒";
-			}
 
 			this.header.setProfileInfo(
 				status.account.avatar,
@@ -382,8 +371,7 @@ export class Status extends Card {
 					}
 
 					this.content = new StatusContentWarned;
-					this.content.slot = "content";
-					this.appendChild(this.content);
+					this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 				}
 
 				if(status.spoilerText != "") {
@@ -396,7 +384,7 @@ export class Status extends Card {
 
 				this.content = new StatusContent;
 				this.content.slot = "content";
-				this.appendChild(this.content);
+				this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 			}
 
 			this.content.setContent(renderEmojis(status.content, status.emojis));
@@ -432,12 +420,9 @@ export class Status extends Card {
 
 		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
 
-		header.slot = "header";
-		footer.slot = "footer";
-
 		shadow.appendChild(statusTemplate.cloneNode(true));
-		this.appendChild(header);
-		this.appendChild(footer);
+		shadow.getElementById("status-root").prepend(header);
+		shadow.getElementById("status-root").appendChild(footer);
 
 		this.header = header;
 		this.footer = footer;
@@ -552,22 +537,22 @@ export class Timeline extends HTMLElement {
 	loadTimeline(type: string, value?: string) {
 		console.log(`lt: ${type} ${value}`);
 		switch(type) {
-			case "Account":
-				mastodon.getAccountTimeline(value).then((data: mastodon.Status[]) => {
+			case "account":
+				mastodon.getAccountTimeline(value, this.#lastPostId).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
-			case mastodon.Timelines.Hashtag:
+			case "tag":
 				mastodon.getHashtagTimeline(value, token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
-			case mastodon.Timelines.Public:
+			case "public":
 				mastodon.getPublicTimeline(token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
-			case mastodon.Timelines.Home:
+			case "home":
 				mastodon.getHomeTimeline(token, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
@@ -591,15 +576,28 @@ export class Timeline extends HTMLElement {
 
 		this.#loadMoreButton = shadow.getElementById("load-more-button") as HTMLButtonElement;
 		this.#loadMoreButton.addEventListener("click", (event) => {
-			const currentTimeline = this.getAttribute("type");
-
-			if(!(currentTimeline == "Account" || currentTimeline == "Hashtag")) {
-				mastodon.getTimeline(instanceUrl, mastodon.Timelines[currentTimeline as keyof typeof mastodon.Timelines], undefined, this.#lastPostId).then((data) => this.addStatuses(data));
-			} else if(currentTimeline == "Account") {
-				mastodon.getAccountTimeline(this.getAttribute("acctid"), this.#lastPostId).then((data) => this.addStatuses(data));
-			} else if(currentTimeline == "Hashtag") {
-				mastodon.getTimeline(instanceUrl, mastodon.Timelines.Hashtag, this.getAttribute("tag"), this.#lastPostId).then((data) => this.addStatuses(data));
+			const timelineType = this.getAttribute("type");
+			
+			switch(timelineType) {
+				case "tag":
+					this.loadTimeline(timelineType, this.getAttribute("tag"));
+					break;
+				case "account":
+					this.loadTimeline(timelineType, this.getAttribute("acctid"));
+					break;
+				default:
+					this.loadTimeline(timelineType);
 			}
+			
+			// const currentTimeline = this.getAttribute("type");
+
+			// if(!(currentTimeline == "Account" || currentTimeline == "Hashtag")) {
+			// 	mastodon.getTimeline(instanceUrl, mastodon.Timelines[currentTimeline as keyof typeof mastodon.Timelines], undefined, this.#lastPostId).then((data) => this.addStatuses(data));
+			// } else if(currentTimeline == "Account") {
+			// 	mastodon.getAccountTimeline(this.getAttribute("acctid"), this.#lastPostId).then((data) => this.addStatuses(data));
+			// } else if(currentTimeline == "Hashtag") {
+			// 	mastodon.getTimeline(instanceUrl, mastodon.Timelines.Hashtag, this.getAttribute("tag"), this.#lastPostId).then((data) => this.addStatuses(data));
+			// }
 		});
 
 		document.addEventListener("postsent", (event) => {
@@ -617,10 +615,10 @@ export class Timeline extends HTMLElement {
 					this.shadowRoot.replaceChildren(this.#loadMoreButton)
 				}
 
-				if(timelineType == "Account" && this.getAttribute("acctid")) {
-					this.loadTimeline("Account", this.getAttribute("acctid"));
-				} else if(timelineType == "Hashtag" && this.getAttribute("tag")) {
-					this.loadTimeline(mastodon.Timelines.Hashtag, this.getAttribute("tag"));
+				if(timelineType == "account" && this.getAttribute("acctid")) {
+					this.loadTimeline("account", this.getAttribute("acctid"));
+				} else if(timelineType == "tag" && this.getAttribute("tag")) {
+					this.loadTimeline("tag", this.getAttribute("tag"));
 				} else if(timelineType) {
 					this.loadTimeline(timelineType);
 				}
@@ -635,35 +633,35 @@ export class Timeline extends HTMLElement {
 					this.shadowRoot.replaceChildren(this.#loadMoreButton)
 				}
 
-				if(timelineType == "Account" && this.getAttribute("acctid")) {
-					this.loadTimeline("Account", this.getAttribute("acctid"));
-				} else if(timelineType == "Hashtag" && this.getAttribute("tag")) {
-					this.loadTimeline(mastodon.Timelines.Hashtag, this.getAttribute("tag"));
+				if(timelineType == "account" && this.getAttribute("acctid")) {
+					this.loadTimeline("account", this.getAttribute("acctid"));
+				} else if(timelineType == "tag" && this.getAttribute("tag")) {
+					this.loadTimeline("tag", this.getAttribute("tag"));
 				} else if(timelineType) {
 					this.loadTimeline(timelineType);
 				}
 
 				break;
 			case "type":
-				if(!(newValue == "Account" || newValue == "Hashtag")) {
+				if(!(newValue == "account" || newValue == "tag")) {
 					this.loadTimeline(newValue, undefined);
 				}
 				break;
 			case "acctid":
-				if(this.getAttribute("type") == "Account") {
-					this.loadTimeline("Account", newValue);
+				if(this.getAttribute("type") == "account") {
+					this.loadTimeline("account", newValue);
 				} else {
-					console.warn("Changed account ID, but this timeline isn't set to Account.");
+					console.warn("Changed account ID, but this timeline isn't set to type \"account\".");
 				}
 				break;
 			case "tag":
-				if(this.getAttribute("type") == "Hashtag") {
+				if(this.getAttribute("type") == "tag") {
 					if(this.shadowRoot) {
 						this.shadowRoot.replaceChildren(this.#loadMoreButton);
 					}
-					this.loadTimeline(mastodon.Timelines.Hashtag, newValue);
+					this.loadTimeline("tag", newValue);
 				} else {
-					console.warn("Changed tag, but this timeline isn't set to Hashtag.");
+					console.warn("Changed tag, but this timeline isn't set to type \"tag\".");
 				}
 				break;
 		}
@@ -959,11 +957,18 @@ export class HomeView extends HTMLElement {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
+
+		const postBox = new PostBox();
 		
 		const homeTimelineObject = new Timeline();
-		homeTimelineObject.setAttribute("type", mastodon.Timelines.Home);
+		homeTimelineObject.setAttribute("type", "home");
 
+		shadow.appendChild(postBox);
 		shadow.appendChild(homeTimelineObject);
+
+		homeTimelineObject.shadowRoot.addEventListener("click", (event) => {
+			console.log((event.target as HTMLElement).nodeName);
+		});
 	}
 }
 
@@ -976,7 +981,7 @@ export class PublicTimelineView extends HTMLElement {
 		const shadow = this.attachShadow({mode: "open"});
 
 		const publicTimelineObject = new Timeline();
-		publicTimelineObject.setAttribute("type", mastodon.Timelines.Public);
+		publicTimelineObject.setAttribute("type", "public");
 
 		shadow.appendChild(publicTimelineObject);
 	}
