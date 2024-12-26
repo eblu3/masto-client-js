@@ -237,6 +237,38 @@ export class AnnouncementStatus {
 	}
 }
 
+export class Application {
+	name: string;
+	website?: URL | null;
+	scopes: string[];
+	redirectUris: string[];
+
+	constructor(data: any) {
+		this.name = data["name"];
+		try {
+			this.website = data["website"];
+		} catch {
+			this.website = null;
+		}
+		this.scopes = data["scopes"];
+		this.redirectUris = data["redirect_uris"];
+	}
+}
+
+export class CredentialApplication extends Application {
+	clientId: string;
+	clientSecret: string;
+	clientSecretExpiresAt: string;
+
+	constructor(data: any) {
+		super(data);
+
+		this.clientId = data["client_id"];
+		this.clientSecret = data["client_secret"];
+		this.clientSecretExpiresAt = data["client_secret_expires_at"];
+	}
+}
+
 /**
  * Represents a custom emoji.
  */
@@ -753,7 +785,213 @@ export class AdminTag extends Tag {
 	}
 }
 
+export class Token {
+	accessToken: string;
+	tokenType: string;
+	scope: string[];
+	createdAt: Date;
+
+	constructor(data: any) {
+		this.accessToken = data["access_token"];
+		this.tokenType = data["token_type"];
+		this.scope = (data["scope"] as string).split(" ");
+		this.createdAt = new Date(Number(data["created_at"])*1000);
+	}
+}
+
 // === API METHODS === //
+
+// == APPS == //
+
+export async function createApplication(
+	instanceUrl: URL,
+	clientName: string,
+	redirectUris: string | string[],
+	scopes: string | string[] = "read",
+	website: URL
+): Promise<CredentialApplication> {
+	let requestBody = {
+		"client_name": clientName,
+		"redirect_uris": redirectUris,
+		"scopes": "",
+		"website": website.href
+	};
+
+	if(typeof scopes === "string") {
+		requestBody.scopes = scopes;
+	} else {
+		requestBody.scopes = scopes.join(" ");
+	}
+
+	const response = await fetch(new URL("/api/v1/apps", instanceUrl), {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json"
+		},
+		body: JSON.stringify(requestBody)
+	});
+
+	if(response.ok) {
+		const json = await response.json();
+
+		if("error" in json) {
+			console.error(json["error"]);
+		} else {
+			return new CredentialApplication(json);
+		}
+	} else {
+		console.error(response.statusText);
+	}
+}
+
+export async function verifyApplication(instanceUrl: URL, token: string): Promise<Application> {
+	const response = await fetch(new URL("/api/v1/apps/verify_credentials", instanceUrl), {
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		const json = await response.json();
+
+		if("error" in json) {
+			console.error(json["error"]);
+		} else {
+			return new Application(json);
+		}
+	} else {
+		console.error(response.statusText);
+	}
+}
+
+// = APPS/OAUTH = //
+
+export async function authorizeUser(
+	instanceUrl: URL,
+	clientId: string,
+	redirectUri: string,
+	scope?: string | string[],
+	state?: string,
+	codeChallenge?: string,
+	forceLogin?: boolean,
+	lang: string = new Intl.Locale(navigator.language).language
+) {
+	const endpoint = new URL("/oauth/authorize", instanceUrl);
+
+	endpoint.searchParams.set("response_type", "code");
+	endpoint.searchParams.set("client_id", clientId);
+	endpoint.searchParams.set("redirect_uri", redirectUri);
+	if(scope) {
+		endpoint.searchParams.set("scope", typeof scope === "string" ? scope : scope.join("+"));
+	}
+	if(state) {
+		endpoint.searchParams.set("state", state);
+	}
+	if(codeChallenge) {
+		endpoint.searchParams.set("code_challenge", codeChallenge);
+		endpoint.searchParams.set("code_challenge_method", "S256");
+	}
+	if(forceLogin != undefined) {
+		endpoint.searchParams.set("force_login", String(forceLogin));
+	}
+	endpoint.searchParams.set("lang", lang);
+
+	open(endpoint, "_blank");
+}
+
+export async function obtainToken(
+	instanceUrl: URL,
+	grantType: string,
+	code: string,
+	clientId: string,
+	clientSecret: string,
+	redirectUri: string,
+	codeVerifier?: string,
+	scope: string[] = ["read"]
+): Promise<Token> {
+	let requestBody = {
+		"grant_type": grantType,
+		"code": code,
+		"client_id": clientId,
+		"client_secret": clientSecret,
+		"redirect_uri": redirectUri,
+		"code_verifier": "",
+		"scope": [""]
+	};
+
+	if(codeVerifier) {
+		requestBody.code_verifier = codeVerifier;
+	} else {
+		delete requestBody.code_verifier;
+	}
+	if(scope) {
+		requestBody.scope = scope;
+	} else {
+		delete requestBody.scope;
+	}
+
+	console.log(requestBody);
+	console.log(JSON.stringify(requestBody));
+
+	const response = await fetch(new URL("/oauth/token", instanceUrl), {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json"
+		},
+		body: JSON.stringify(requestBody)
+	});
+
+	if(response.ok) {
+		return new Token(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(`${json["error"]}: ${json["error_description"]}`);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function revokeToken(
+	instanceUrl: URL,
+	clientId: string,
+	clientSecret: string,
+	token: string
+) {
+	const requestBody = {
+		"client_id": clientId,
+		"client_secret": clientSecret,
+		"token": token
+	};
+
+	const response = await fetch(new URL("/oauth/revoke", instanceUrl), {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json"
+		},
+		body: JSON.stringify(requestBody)
+	});
+
+	if(!response.ok) {
+		try {
+			const json = await response.json();
+			console.error(`${json["error"]}: ${json["error_description"]}`);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function getOAuthConfiguration(instanceUrl: URL): Promise<object> {
+	const response = await fetch(new URL("/.well-known/oauth-authorization-server", instanceUrl));
+
+	if(!response.ok) {
+		console.error(response.statusText);
+	} else {
+		return await response.json();
+	}
+}
 
 // == TIMELINES == //
 

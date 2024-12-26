@@ -9,8 +9,16 @@ interface ViewObject {
 	acct?: string;
 }
 
+let instanceUrl: URL;
+let token: string;
+let appInfo: mastodon.CredentialApplication;
+let authCode: string;
+let userToken: mastodon.Token;
+
 const viewTarget = document.getElementById("view-target");
 const initialState = {name: "home"};
+
+let currentView: HTMLElement;
 
 function switchView(data: ViewObject, isPoppingState: boolean = false) {
 	console.log(`switching view to ${data.name}`);
@@ -18,34 +26,35 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 
 	switch(data.name) {
 		case "home":
-			viewTarget.appendChild(new customElements.HomeView());
+			currentView = new customElements.HomeView();
+			viewTarget.appendChild(currentView);
 			if(!isPoppingState) {
 				history.pushState(data, "", "/home");
 			}
 			break;
 		case "public":
-			viewTarget.appendChild(new customElements.PublicTimelineView());
+			currentView = new customElements.PublicTimelineView();
+			viewTarget.appendChild(currentView);
 			if(!isPoppingState) {
 				history.pushState(data, "", "/public");
 			}
 			break;
 		case "account":
-			console.log(data);
-			const accountView = new customElements.AccountView();
-			viewTarget.appendChild(accountView);
-			accountView.accountTimeline.setAttribute("type", "Account");
+			currentView = new customElements.AccountView();
+			viewTarget.appendChild(currentView);
+			(currentView as customElements.AccountView).accountTimeline.setAttribute("type", "account");
 			if(data.acct) {
 				mastodon.getAccountByHandle(data.acct).then((account) => {
-					accountView.profileHeader.setAccount(account);
+					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
 				getAccountIdFromHandle(data.acct).then((id) => {
-					accountView.accountTimeline.setAttribute("acctid", id);
+					(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", id);
 				});
 			} else {
 				mastodon.getAccount(data.id).then((account) => {
-					accountView.profileHeader.setAccount(account);
+					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
-				accountView.accountTimeline.setAttribute("acctid", data.id);
+				(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", data.id);
 			}
 			if(!isPoppingState) {
 				if(data.acct) {
@@ -60,12 +69,12 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 	}
 }
 
-function init() {
+function initView() {
 	try {
 		switchView(initialState);
 		history.replaceState(initialState, "", document.location.href);
 	} catch {
-		setTimeout(() => {init()}, 500);
+		setTimeout(() => {initView()}, 500);
 	}
 }
 
@@ -90,4 +99,31 @@ try {
 
 }
 
-init();
+instanceUrl = env.instanceUrl;
+token = env.token;
+
+if(localStorage.getItem("appInfo")) {
+	appInfo = JSON.parse(localStorage.getItem("appInfo")) as mastodon.CredentialApplication;
+}
+if(localStorage.getItem("authCode")) {
+	authCode = localStorage.getItem("authCode");
+}
+if(localStorage.getItem("userToken")) {
+	userToken = JSON.parse(localStorage.getItem("userToken")) as mastodon.Token;
+}
+
+initView();
+// mastodon.createApplication(instanceUrl, "thingy 3: god I hope this works", new URL("/auth", location.origin).href, "read", new URL("https://example.com")).then((app) => {
+// 	localStorage.setItem("appInfo", JSON.stringify(app));
+// 	appInfo = app;
+
+// 	mastodon.authorizeUser(instanceUrl, app.clientId, app.redirectUris[0]);
+// });
+
+// if(appInfo && authCode) {
+// 	console.log(appInfo);
+// 	mastodon.obtainToken(instanceUrl, "authorization_code", authCode, appInfo.clientId, appInfo.clientSecret, appInfo.redirectUris[0]).then((obtainedToken) => {
+// 		localStorage.setItem("userToken", JSON.stringify(obtainedToken));
+// 		userToken = obtainedToken;
+// 	});
+// }
