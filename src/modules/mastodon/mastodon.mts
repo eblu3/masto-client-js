@@ -39,6 +39,13 @@ export enum PreviewCardType {
 	Rich = "rich"
 }
 
+export enum ReportCategory {
+	Spam = "spam",
+	Legal = "legal",
+	Violation = "violation",
+	Other = "other"
+}
+
 export enum Timelines {
 	Public = "/api/v1/timelines/public",
 	Hashtag = "/api/v1/timelines/tag/",
@@ -603,6 +610,36 @@ export class PreviewCard {
 		}
 		this.embedUrl = data["embed_url"];
 		this.blurhash = data["blurhash"];
+	}
+}
+
+export class Report {
+	id: string;
+	actionTaken: boolean;
+	actionTakenAt: Date | null;
+	category: ReportCategory;
+	comment: string;
+	forwarded: boolean;
+	createdAt: Date;
+	statusIds: string[] | null;
+	ruleIds: string[] | null;
+	targetAccount: Account;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.actionTaken = data["action_taken"];
+		try {
+			this.actionTakenAt = new Date(data["action_taken_at"]);
+		} catch {
+			this.actionTakenAt = null;
+		}
+		this.category = data["category"];
+		this.comment = data["comment"];
+		this.forwarded = data["forwarded"];
+		this.createdAt = new Date(data["created_at"]);
+		this.statusIds = data["status_ids"];
+		this.ruleIds = data["rule_ids"];
+		this.targetAccount = data["target_account"];
 	}
 }
 
