@@ -82,7 +82,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 				mastodon.lookupUsername(instanceUrl, data.acct).then((account) => {
 					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
-				getAccountIdFromHandle(data.acct).then((id) => {
+				getAccountIdFromHandle(instanceUrl, data.acct).then((id) => {
 					(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", id);
 				});
 			} else {
