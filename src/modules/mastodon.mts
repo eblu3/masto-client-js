@@ -584,6 +584,45 @@ export class Reaction {
 	}
 }
 
+export class Relationship {
+	id: string;
+	following: boolean;
+	showingReblogs: boolean;
+	notifying: boolean;
+	languages: Intl.Locale[];
+	followedBy: boolean;
+	blocking: boolean;
+	blockedBy: boolean;
+	muting: boolean;
+	mutingNotifications: boolean;
+	requested: boolean;
+	requestedBy: boolean;
+	domainBlocking: boolean;
+	endorsed: boolean;
+	note: string;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.following = data["following"];
+		this.showingReblogs = data["showing_reblogs"];
+		this.notifying = data["notifying"];
+		this.languages = [];
+		for(const language of data["languages"]) {
+			this.languages.push(new Intl.Locale(language));
+		}
+		this.followedBy = data["followed_by"];
+		this.blocking = data["blocking"];
+		this.blockedBy = data["blocked_by"];
+		this.muting = data["muting"];
+		this.mutingNotifications = data["muting_notifications"];
+		this.requested = data["requested"];
+		this.requestedBy = data["requested_by"];
+		this.domainBlocking = data["domain_blocking"];
+		this.endorsed = data["endorsed"];
+		this.note = data["note"];
+	}
+}
+
 /**
  * Represents a custom user role that grants permissions.
  */
@@ -1510,6 +1549,285 @@ export async function getListsContainingAccount(instanceUrl: URL, id: string, to
 
 		for(const list of json) {
 			out.push(new List(json));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function followAccount(
+	instanceUrl: URL,
+	id: string,
+	token: string,
+	reblogs?: boolean,
+	notify?: boolean,
+	languages?: Intl.Locale[]
+): Promise<Relationship> {
+	const endpoint = new URL(`/api/v1/accounts/${id}/follow`, instanceUrl);
+
+	if(reblogs != undefined) {
+		endpoint.searchParams.set("reblogs", String(reblogs));
+	}
+	if(notify != undefined) {
+		endpoint.searchParams.set("notify", String(notify));
+	}
+	if(languages) {
+		for(const lang of languages) {
+			endpoint.searchParams.append("languages[]", lang.language);
+		}
+	}
+
+	const response = await fetch(endpoint, {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function unfollowAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/unfollow`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function removeAccountFromFollowers(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/remove_from_followers`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function blockAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/block`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function unblockAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/unblock`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function muteAccount(
+	instanceUrl: URL,
+	id: string,
+	token: string,
+	notifications?: boolean,
+	duration?: number
+): Promise<Relationship> {
+	const endpoint = new URL(`/api/v1/accounts/${id}/mute`, instanceUrl);
+
+	if(notifications != undefined) {
+		endpoint.searchParams.set("notifications", String(notifications));
+	}
+	if(duration) {
+		endpoint.searchParams.set("duration", String(duration));
+	}
+
+	const response = await fetch(endpoint, {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function unmuteAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/unmute`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function featureAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/pin`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function unfeatureAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/unpin`, instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function setPrivateNote(instanceUrl: URL, id: string, token: string, comment?: string): Promise<Relationship> {
+	const endpoint = new URL(`/api/v1/accounts/${id}/unblock`, instanceUrl);
+
+	if(comment) {
+		endpoint.searchParams.set("comment", comment);
+	}
+	
+	const response = await fetch(endpoint, {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new Relationship(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function getRelationships(instanceUrl: URL, token: string, ids?: string[], withSuspended?: boolean): Promise<Relationship[]> {
+	const endpoint = new URL("/api/v1/accounts/relationships", instanceUrl);
+
+	if(ids) {
+		for(const id of ids) {
+			endpoint.searchParams.append("id[]", id);
+		}
+	}
+	if(withSuspended != undefined) {
+		endpoint.searchParams.set("with_suspended", String(withSuspended));
+	}
+
+	const response = await fetch(endpoint, {
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: Relationship[] = [];
+
+		for(const relationship of json) {
+			out.push(new Relationship(relationship));
 		}
 
 		return out;
