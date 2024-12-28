@@ -1,5 +1,5 @@
 import * as env from "./env.mjs";
-import * as mastodon from "./modules/mastodon.mjs";
+import * as mastodon from "./modules/mastodon/mastodon.mjs";
 import * as customElements from "./modules/custom_elements.mjs";
 import { getAccountIdFromHandle } from "./modules/masto_ts.mjs";
 
@@ -79,14 +79,14 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			viewTarget.appendChild(currentView);
 			(currentView as customElements.AccountView).accountTimeline.setAttribute("type", "account");
 			if(data.acct) {
-				mastodon.lookupUsername(instanceUrl, data.acct).then((account) => {
+				mastodon.accounts.lookupUsername(instanceUrl, data.acct).then((account) => {
 					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
 				getAccountIdFromHandle(instanceUrl, data.acct).then((id) => {
 					(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", id);
 				});
 			} else {
-				mastodon.getAccount(instanceUrl, data.id, token).then((account) => {
+				mastodon.accounts.getAccount(instanceUrl, data.id, token).then((account) => {
 					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
 				(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", data.id);

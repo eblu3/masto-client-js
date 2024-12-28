@@ -1,7 +1,7 @@
 import * as env from "../env.mjs";
-import * as mastodon from "./mastodon.mjs";
+import * as mastodon from "./mastodon/mastodon.mjs";
 import * as customElements from "./custom_elements.mjs";
-import { Timelines } from "./mastodon.mjs";
+import { Timelines } from "./mastodon/mastodon.mjs";
 
 export const instanceUrl: URL = env.instanceUrl;
 export var timeline: Timelines;
@@ -130,7 +130,7 @@ export function resetLastStatus() {
 }
 
 export async function getAccountIdFromHandle(instanceUrl: URL, acct: string): Promise<string> {
-	const account = await mastodon.lookupUsername(instanceUrl, acct);
+	const account = await mastodon.accounts.lookupUsername(instanceUrl, acct);
 	
 	return account.id;
 }

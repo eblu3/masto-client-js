@@ -1,4 +1,4 @@
-import * as mastodon from "./mastodon.mjs";
+import * as mastodon from "./mastodon/mastodon.mjs";
 import {getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, charLimit} from "./masto_ts.mjs";
 import { token } from "../env.mjs";
 import * as env from "../env.mjs";
@@ -80,11 +80,11 @@ export class ProfileHeader extends HTMLElement {
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "acctid") {
-			mastodon.getAccount(env.instanceUrl, newValue, env.token).then((account) => {
+			mastodon.accounts.getAccount(env.instanceUrl, newValue, env.token).then((account) => {
 				this.setAccount(account);
 			});
 		} else if(name == "acct") {
-			mastodon.lookupUsername(env.instanceUrl, newValue).then((account) => {
+			mastodon.accounts.lookupUsername(env.instanceUrl, newValue).then((account) => {
 				this.setAccount(account);
 			});
 		}
@@ -548,7 +548,7 @@ export class Timeline extends HTMLElement {
 		console.log(`lt: ${this.instanceUrl} ${type} ${value}`);
 		switch(type) {
 			case "account":
-				mastodon.getAccountStatuses(this.instanceUrl, value, token ?? null, this.#lastPostId).then((data: mastodon.Status[]) => {
+				mastodon.accounts.getAccountStatuses(this.instanceUrl, value, token ?? null, this.#lastPostId).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
@@ -697,7 +697,7 @@ export class NavigationSidebar extends HTMLElement {
 
 		this.#youLink = shadow.getElementById("you-link") as HTMLAnchorElement;
 		
-		mastodon.verifyCredentials(env.instanceUrl, env.token).then((account) => {
+		mastodon.accounts.verifyCredentials(env.instanceUrl, env.token).then((account) => {
 			this.#youLink.href = `/user/?acct=@${account.acct}`;
 		})
 	}
