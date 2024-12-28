@@ -7,6 +7,7 @@ export * as blocks from "./blocks.mjs";
 export * as domainBlocks from "./domainBlocks.mjs";
 export * as filters from "./filters.mjs";
 export * as reports from "./reports.mjs";
+export * as followRequests from "./followRequests.mjs";
 
 export async function registerAccount(
 	instanceUrl: URL,
