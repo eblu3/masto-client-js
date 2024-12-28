@@ -548,7 +548,7 @@ export class Timeline extends HTMLElement {
 		console.log(`lt: ${this.instanceUrl} ${type} ${value}`);
 		switch(type) {
 			case "account":
-				mastodon.getAccountTimeline(value, this.#lastPostId).then((data: mastodon.Status[]) => {
+				mastodon.getAccountStatuses(this.instanceUrl, value, token ?? null, this.#lastPostId).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;

@@ -317,6 +317,22 @@ export class ExtendedDescription {
 	}
 }
 
+export class FeaturedTag {
+	id: string;
+	name: string;
+	url: URL;
+	statusesCount: number;
+	lastStatusAt: Date;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.name = data["name"];
+		this.url = new URL(data["url"]);
+		this.statusesCount = Number(data["statuses_count"]);
+		this.lastStatusAt = new Date(data["last_status_at"]);
+	}
+}
+
 /**
  * Represents the software instance of Mastodon running on this domain.
  */
@@ -386,6 +402,18 @@ export class InstanceIcon {
 	constructor(data: any) {
 		this.src = new URL(data["src"]);
 		this.size = data["size"];
+	}
+}
+
+export class List {
+	id: string;
+	title: string;
+	repliesPolicy: string;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.title = data["title"];
+		this.repliesPolicy = data["replies_policy"];
 	}
 }
 
@@ -1236,6 +1264,265 @@ export async function getAccount(instanceUrl: URL, id: string, token?: string): 
 	}
 }
 
+export async function getAccounts(instanceUrl: URL, ids: string[], token?: string): Promise<Account[]> {
+	let endpoint = new URL("/api/v1/accounts", instanceUrl);
+	let response: Response;
+
+	for(const id of ids) {
+		endpoint.searchParams.append("id[]", id);
+	}
+
+	if(token) {
+		response = await fetch(endpoint, {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+	} else {
+		response = await fetch(endpoint);
+	}
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: Account[] = [];
+
+		for(const account of json) {
+			out.push(new Account(account));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function getAccountStatuses(
+	instanceUrl: URL,
+	id: string,
+	token?: string,
+	maxId?: string,
+	minId?: string,
+	limit: number = 20,
+	onlyMedia?: boolean,
+	excludeReplies?: boolean,
+	excludeReblogs?: boolean,
+	pinned?: boolean,
+	tagged?: string
+): Promise<Status[]> {
+	const endpoint = new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl);
+	let response: Response;
+
+	if(maxId) {
+		endpoint.searchParams.set("max_id", maxId);
+	}
+	if(minId) {
+		endpoint.searchParams.set("min_id", minId);
+	}
+	if(limit) {
+		if(limit > 0 && limit <= 40) {
+			endpoint.searchParams.set("limit", String(limit));
+		} else {
+			console.warn(`You requested ${limit} statuses. Mastodon only supports fetching between 1 and 40 statuses in a single request. Defaulting to 20.`);
+		}
+	}
+	if(onlyMedia != undefined) {
+		endpoint.searchParams.set("only_media", String(onlyMedia));
+	}
+	if(excludeReplies != undefined) {
+		endpoint.searchParams.set("exclude_replies", String(excludeReplies));
+	}
+	if(excludeReblogs != undefined) {
+		endpoint.searchParams.set("exclude_reblogs", String(excludeReblogs));
+	}
+	if(pinned != undefined) {
+		endpoint.searchParams.set("pinned", String(pinned));
+	}
+	if(tagged) {
+		endpoint.searchParams.set("tagged", tagged);
+	}
+
+	if(token) {
+		response = await fetch(endpoint, {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+	} else {
+		response = await fetch(endpoint);
+	}
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: Status[] = [];
+
+		for(const status of json) {
+			out.push(new Status(status));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.status);
+		}
+	}
+}
+
+// TODO: add support for link header once I figure out how that works
+export async function getAccountFollowers(
+	instanceUrl: URL,
+	id: string,
+	token?: string,
+	limit: number = 40
+): Promise<Account[]> {
+	const endpoint = new URL(`/api/v1/accounts/${id}/followers`, instanceUrl);
+	let response: Response;
+
+	if(limit) {
+		if(limit > 0 && limit <= 80) {
+			endpoint.searchParams.set("limit", String(limit));
+		} else {
+			console.warn(`You specified ${limit} accounts but Mastodon only supports returning between 1 and 80 accounts from this endpoint. Defaulting to 40.`);
+		}
+	}
+
+	if(token) {
+		response = await fetch(endpoint, {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+	} else {
+		response = await fetch(endpoint);
+	}
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: Account[] = [];
+
+		for(const account of json) {
+			out.push(new Account(account));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+// TODO: same as above
+export async function getAccountFollowing(
+	instanceUrl: URL,
+	id: string,
+	token?: string,
+	limit: number = 40
+): Promise<Account[]> {
+	const endpoint = new URL(`/api/v1/accounts/${id}/following`, instanceUrl);
+	let response: Response;
+
+	if(limit) {
+		if(limit > 0 && limit <= 80) {
+			endpoint.searchParams.set("limit", String(limit));
+		} else {
+			console.warn(`You specified ${limit} accounts but Mastodon only supports returning between 1 and 80 accounts from this endpoint. Defaulting to 40.`);
+		}
+	}
+
+	if(token) {
+		response = await fetch(endpoint, {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+	} else {
+		response = await fetch(endpoint);
+	}
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: Account[] = [];
+
+		for(const account of json) {
+			out.push(new Account(account));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function getAccountFeaturedTags(instanceUrl: URL, id: string, token?: string): Promise<FeaturedTag[]> {
+	let response: Response;
+	
+	if(token) {
+		response = await fetch(new URL(`/api/v1/accounts/${id}/featured_tags`, instanceUrl), {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+	} else {
+		response = await fetch(new URL(`/api/v1/accounts/${id}/featured_tags`, instanceUrl));
+	}
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: FeaturedTag[] = [];
+
+		for(const tag of json) {
+			out.push(new FeaturedTag(tag));
+		}
+
+		return out;
+	} else {
+		console.error(response.statusText);
+		return [];
+	}
+}
+
+export async function getListsContainingAccount(instanceUrl: URL, id: string, token: string): Promise<List[]> {
+	const response = await fetch(new URL(`/api/v1/accounts/${id}/lists`, instanceUrl), {
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: List[] = [];
+
+		for(const list of json) {
+			out.push(new List(json));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
 // == TIMELINES == //
 
 export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string): Promise<Status[]> | null {
@@ -1561,54 +1848,6 @@ export async function getHomeTimeline(
 
 		return processedStatuses;
 	} catch(error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-export async function getAccountTimeline(id: string, startAtId?: string): Promise<Status[]> | null {
-	console.log(`Fetching account ID ${id}'s timeline from instance ${env.instanceUrl}...`);
-	try {
-		let response;
-
-		if (env.token) {
-			if (startAtId) {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, env.instanceUrl), {
-					headers: {
-						"Authorization": `Bearer ${env.token}`
-					}
-				});
-			} else {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, env.instanceUrl), {
-					headers: {
-						"Authorization": `Bearer ${env.token}`
-					}
-				});
-			}
-		} else {
-			if (startAtId) {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses?max_id=${startAtId}`, env.instanceUrl));
-			} else {
-				response = await fetch(new URL(`/api/v1/accounts/${id}/statuses`, env.instanceUrl));
-			}
-		}
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		const json = await response.json();
-		console.log("Got it!");
-		console.log(json);
-
-		let processedStatuses: Status[] = [];
-
-		for (const status of json) {
-			processedStatuses.push(new Status(status));
-		}
-
-		return processedStatuses;
-	} catch (error) {
 		console.error(error.message);
 		return null;
 	}
