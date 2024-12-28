@@ -146,13 +146,13 @@ export class CredentialAccount extends Account {
 	/** An extra attribute that contains source values to be used with API methods that [verify credentials](https://docs.joinmastodon.org/methods/accounts/#verify_credentials) and [update credentials](https://docs.joinmastodon.org/methods/accounts/#update_credentials). */
 	source: object;
 	/** The role assigned to the currently authorized user. */
-	role: Role;
+	role?: Role;
 
 	constructor(data: any) {
 		super(data);
 
 		this.source = data["source"];
-		this.role = data["role"];
+		this.role = data["role"] ?? undefined;
 	}
 }
 
@@ -803,6 +803,17 @@ export class Token {
 
 // == APPS == //
 
+/**
+ * Creates a new application on the instance, used to obtain OAuth 2 credentials.
+ * 
+ * It is recommended to treat the `clientId` and `clientSecret` values in the returned data as if they were passwords. Storing these values without encrypting them could be a security risk.
+ * @param instanceUrl The URL of the instance to create the application on.
+ * @param clientName The name of the application.
+ * @param redirectUris A string or array of strings representing where the user should be redirected after authorization.
+ * @param scopes A string or array of strings representing the OAuth scopes for this application. Defaults to `read`.
+ * @param website The URL of the application's homepage.
+ * @returns A `CredentialApplication` with the application's info as stored on the instance.
+ */
 export async function createApplication(
 	instanceUrl: URL,
 	clientName: string,
@@ -844,6 +855,12 @@ export async function createApplication(
 	}
 }
 
+/**
+ * Verifies that the application's credentials work.
+ * @param instanceUrl The URL of the instance to query.
+ * @param token The application's token.
+ * @returns The application, as stored on the instance. Throws an error if not.
+ */
 export async function verifyApplication(instanceUrl: URL, token: string): Promise<Application> {
 	const response = await fetch(new URL("/api/v1/apps/verify_credentials", instanceUrl), {
 		headers: {
@@ -866,6 +883,17 @@ export async function verifyApplication(instanceUrl: URL, token: string): Promis
 
 // = APPS/OAUTH = //
 
+/**
+ * Displays an authorization form to the user. If approved, it will create and return an authorization code, then redirect to the desired `redirect_uri`. The authorization code can be used while requesting a token to obtain access to user-level methods.
+ * @param instanceUrl The URL of the instance to log in to.
+ * @param clientId The client ID, obtained during app registration.
+ * @param redirectUri Set a URI to redirect the user to. Must match one of the `redirect_uris` declared during app registration.
+ * @param scope List of requested [OAuth scopes](https://docs.joinmastodon.org/api/oauth-scopes/). Must be a subset of `scopes` declared during app registration. If not provided, defaults to `read`.
+ * @param state Arbitrary value to passthrough when the user authorizes or rejects the authorization request.
+ * @param codeChallenge The [PKCE code challenge](https://docs.joinmastodon.org/spec/oauth/#pkce) for the authorization request.
+ * @param forceLogin Forces the user to re-login, which is necessary for authorizing with multiple accounts from the same instance.
+ * @param lang The ISO 639-1 two-letter language code to use while rendering the authorization form. Defaults to the browser's current language.
+ */
 export async function authorizeUser(
 	instanceUrl: URL,
 	clientId: string,
@@ -993,6 +1021,221 @@ export async function getOAuthConfiguration(instanceUrl: URL): Promise<object> {
 	}
 }
 
+// = APPS/EMAILS = //
+
+export async function resendConfirmationEmail(instanceUrl: URL, token: string, email: string) {
+	let response;
+
+	if(email) {
+		response = await fetch(new URL("/api/v1/emails/confirmations", instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`,
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({"email": email})
+		});
+	} else {
+		response = await fetch(new URL("/api/v1/emails/confirmations", instanceUrl), {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+	}
+
+	if(!response.ok) {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+// == ACCOUNTS == //
+
+export async function registerAccount(
+	instanceUrl: URL,
+	token: string,
+	username: string,
+	email: string,
+	password: string,
+	agreement: boolean,
+	locale: string = new Intl.Locale(navigator.language).language,
+	reason?: string
+): Promise<Token> {
+	let requestBody = {
+		"username": username,
+		"email": email,
+		"password": password,
+		"agreement": agreement,
+		"locale": locale,
+		"reason": ""
+	};
+
+	if(reason) {
+		requestBody.reason = reason;
+	} else {
+		delete requestBody.reason;
+	}
+
+	const response = await fetch(new URL("/api/v1/accounts", instanceUrl), {
+		method: "POST",
+		headers: {
+			"Authorization": `Bearer ${token}`,
+			"Content-Type": "application/json"
+		},
+		body: JSON.stringify(requestBody)
+	});
+
+	if(response.ok) {
+		return new Token(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+			console.error(json["details"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function verifyCredentials(instanceUrl: URL, token: string): Promise<CredentialAccount> {
+	const response = await fetch(new URL("/api/v1/accounts/verify_credentials", instanceUrl), {
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		return new CredentialAccount(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+// TODO: finish this
+export async function updateCredentials(
+	instanceUrl: URL,
+	token: string,
+	displayName?: string,
+	note?: string,
+	avatar?: File,
+	header?: File,
+	locked?: boolean,
+	bot?: boolean,
+	discoverable?: boolean,
+	hideCollections?: boolean,
+	indexable?: boolean,
+	fields?: Map<string, string>,
+	privacy?: string,
+	sensitive?: boolean,
+	language?: string
+): Promise<Account> {
+	const formData = new FormData();
+
+	if(displayName) {
+		formData.append("display_name", displayName);
+	}
+	if(note) {
+		formData.append("note", note);
+	}
+	if(avatar) {
+		formData.append("avatar", avatar);
+	}
+	if(header) {
+		formData.append("header", header);
+	}
+	if(locked != undefined) {
+		formData.append("locked", String(locked));
+	}
+	if(bot != undefined) {
+		formData.append("bot", String(bot));
+	}
+	if(discoverable != undefined) {
+		formData.append("discoverable", String(discoverable));
+	}
+	if(hideCollections != undefined) {
+		formData.append("hide_collections", String(hideCollections));
+	}
+	if(indexable != undefined) {
+		formData.append("indexable", String(indexable));
+	}
+	if(fields) {
+		let i = 0;
+		for(const [key, value] of fields) {
+			formData.append(`fields_attributes[${i}][name]`, key);
+			formData.append(`fields_attributes[${i}][value]`, value);
+			i++;
+		}
+	}
+	if(privacy && (privacy === "public" || privacy === "unlisted" || privacy === "private")) {
+		formData.append("source[privacy]", privacy);
+	} else if(privacy) {
+		console.warn(`Unrecognized privacy type ${privacy}. Not setting default post privacy.`);
+	}
+	if(sensitive) {
+		formData.append("source[sensitive]", String(sensitive));
+	}
+	if(language && language.length == 2) {
+		formData.append("source[language]", language);
+	} else if(language) {
+		console.warn(`Language ${language} does not seem like a valid country code. Not setting default post language.`);
+	}
+
+	const response = await fetch(new URL("/api/v1/accounts/update_credentials", instanceUrl), {
+		method: "PATCH",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		},
+		body: formData
+	});
+
+	if(response.ok) {
+		return new CredentialAccount(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function getAccount(instanceUrl: URL, id: string, token?: string): Promise<Account> {
+	let response; 
+	
+	if(token) {
+		response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl), {
+			headers: {
+				"Authorization": `Bearer ${token}`
+			}
+		});
+	} else {
+		response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
+	}
+
+	if(response.ok) {
+		return new Account(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
 // == TIMELINES == //
 
 export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string): Promise<Status[]> | null {
@@ -1044,6 +1287,7 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 
 /**
  * Fetches the public timeline.
+ * @param instanceUrl The URL of the instance to retrieve the timeline from.
  * @param token The user token. Required if the instance does not share a public timeline.
  * @param local Shows only statuses from this instance. Defaults to false.
  * @param remote Shows only statuses from other instances. Defaults to false.
@@ -1055,6 +1299,7 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
  * @returns An array of `Status` objects, or `null` if an error occurred.
  */
 export async function getPublicTimeline(
+	instanceUrl: URL,
 	token?: string,
 	local: boolean = false,
 	remote: boolean = false,
@@ -1064,7 +1309,7 @@ export async function getPublicTimeline(
 	minId?: string,
 	limit: number = 20
 ): Promise<Status[]> | null {
-	let endpoint = new URL("/api/v1/timelines/public", env.instanceUrl);
+	let endpoint = new URL("/api/v1/timelines/public", instanceUrl);
 
 	// setting query parameters
 	if(local && !remote) {
@@ -1136,6 +1381,7 @@ export async function getPublicTimeline(
 
 /**
  * Gets all statuses with the specified hashtag(s).
+ * @param instanceUrl The URL of the instance to retrieve the timeline from.
  * @param hashtag The hashtag to search for.
  * @param token The user token.
  * @param any Additional hashtags to include in the search.
@@ -1151,6 +1397,7 @@ export async function getPublicTimeline(
  * @returns An array of `Status` objects, or `null` if an error occurred.
  */
 export async function getHashtagTimeline(
+	instanceUrl: URL,
 	hashtag: string,
 	token?: string,
 	any?: string[],
@@ -1164,7 +1411,7 @@ export async function getHashtagTimeline(
 	minId?: string,
 	limit: number = 20
 ): Promise<Status[]> | null {
-	let endpoint = new URL(`/api/v1/timelines/tag/${hashtag}`, env.instanceUrl);
+	let endpoint = new URL(`/api/v1/timelines/tag/${hashtag}`, instanceUrl);
 
 	if(any) {
 		for(const tag of any) {
@@ -1388,33 +1635,6 @@ export async function getStatus(id: string): Promise<[Status, boolean, Account]>
 		const status = new Status(await response.json());
 
 		return status.reblog ? [status.reblog, true, status.account] : [status, false, undefined];
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-export async function getAccount(id: string): Promise<Account> | null {
-	try {
-		let response;
-
-		if (env.token) {
-			response = await fetch(new URL(`/api/v1/accounts/${id}`, env.instanceUrl), {
-				headers: {
-					"Authorization": `Bearer ${env.token}`
-				}
-			});
-		} else {
-			response = await fetch(new URL(`/api/v1/accounts/${id}`, env.instanceUrl));
-		}
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		const account = new Account(await response.json());
-
-		return account;
 	} catch (error) {
 		console.error(error.message);
 		return null;

@@ -7,6 +7,11 @@ interface ViewObject {
 	name: string;
 	id?: string;
 	acct?: string;
+	modal?: ModalObject;
+}
+
+interface ModalObject {
+	name: string;
 }
 
 let instanceUrl: URL;
@@ -16,31 +21,61 @@ let authCode: string;
 let userToken: mastodon.Token;
 
 const viewTarget = document.getElementById("view-target");
-const initialState = {name: "home"};
+const initialState = {name: "public"};
 
 let currentView: HTMLElement;
+let modal: customElements.Modal;
+let modalContent: HTMLElement;
+let currentState: ViewObject;
+
+async function showModal(content: string | HTMLElement) {
+	modal = new customElements.Modal();
+	document.body.appendChild(modal);
+	if(typeof content === "string") {
+		modal.innerHTML = content;
+		modalContent = modal;
+	} else {
+		modal.appendChild(content);
+		modalContent = content;
+	}
+}
 
 function switchView(data: ViewObject, isPoppingState: boolean = false) {
 	console.log(`switching view to ${data.name}`);
 	viewTarget.innerText = "";
 
+	if(data.modal) {
+		switchModalView(data.modal);
+	}
+
 	switch(data.name) {
 		case "home":
-			currentView = new customElements.HomeView();
+			currentState = data;
+			currentView = new customElements.HomeView(instanceUrl);
 			viewTarget.appendChild(currentView);
 			if(!isPoppingState) {
 				history.pushState(data, "", "/home");
 			}
 			break;
 		case "public":
-			currentView = new customElements.PublicTimelineView();
+			currentState = data;
+			currentView = new customElements.PublicTimelineView(instanceUrl);
 			viewTarget.appendChild(currentView);
 			if(!isPoppingState) {
 				history.pushState(data, "", "/public");
 			}
 			break;
+		case "local":
+			currentState = data;
+			currentView = new customElements.LocalTimelineView(instanceUrl);
+			viewTarget.appendChild(currentView);
+			if(!isPoppingState) {
+				history.pushState(data, "", "/local");
+			}
+			break;
 		case "account":
-			currentView = new customElements.AccountView();
+			currentState = data;
+			currentView = new customElements.AccountView(instanceUrl);
 			viewTarget.appendChild(currentView);
 			(currentView as customElements.AccountView).accountTimeline.setAttribute("type", "account");
 			if(data.acct) {
@@ -51,7 +86,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 					(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", id);
 				});
 			} else {
-				mastodon.getAccount(data.id).then((account) => {
+				mastodon.getAccount(instanceUrl, data.id, token).then((account) => {
 					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
 				(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", data.id);
@@ -66,6 +101,35 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			break;
 		default:
 			console.error(`undefined timeline ${data.name}`);
+	}
+}
+
+function switchModalView(data: ModalObject) {
+	switch(data.name) {
+		case "settings":
+			showModal(new customElements.ModalSettingsView()).then(() => {
+				modalContent.shadowRoot.getElementById("btn-set-instance-url").addEventListener("click", (event) => {
+					instanceUrl = new URL((modalContent as customElements.ModalSettingsView).instanceUrlInput.value);
+					localStorage.setItem("instanceUrl", (modalContent as customElements.ModalSettingsView).instanceUrlInput.value);
+					switchView(currentState);
+				});
+				modalContent.shadowRoot.getElementById("btn-remove-instance-url").addEventListener("click", (event) => {
+					instanceUrl = env.instanceUrl;
+					localStorage.removeItem("instanceUrl");
+					(modalContent as customElements.ModalSettingsView).instanceUrlInput.value = "";
+					switchView(currentState);
+				});
+			});
+			break;
+		case "test":
+			showModal(`
+				<h2>testttt</h2>
+				<p>This is a test.</p>
+				<button>This doesn't do anything</button>
+				`);
+			break;
+		default:
+			console.error(`undefined modal view ${data.name}`);
 	}
 }
 
@@ -95,12 +159,25 @@ try {
 			acct: debugAcctInput.value
 		});
 	});
+
+	const debugModalInput = document.getElementById("debug-modal") as HTMLInputElement;
+	const showModalButton = document.getElementById("modal-button") as HTMLButtonElement;
+
+	showModalButton.addEventListener("click", (event) => {
+		switchModalView({name: debugModalInput.value});
+	});
 } catch {
 
 }
 
-instanceUrl = env.instanceUrl;
+if(localStorage.getItem("instanceUrl")) {
+	instanceUrl = new URL(localStorage.getItem("instanceUrl"));
+} else {
+	instanceUrl = env.instanceUrl;
+}
 token = env.token;
+
+console.log(instanceUrl);
 
 if(localStorage.getItem("appInfo")) {
 	appInfo = JSON.parse(localStorage.getItem("appInfo")) as mastodon.CredentialApplication;

@@ -1,6 +1,7 @@
 import * as mastodon from "./mastodon.mjs";
-import {instanceUrl, getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, charLimit} from "./masto_ts.mjs";
+import {getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, charLimit} from "./masto_ts.mjs";
 import { token } from "../env.mjs";
+import * as env from "../env.mjs";
 
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
@@ -9,6 +10,7 @@ let linkCardStylesheet: CSSStyleSheet;
 let timelineStylesheet: CSSStyleSheet;
 let navigationStylesheet: CSSStyleSheet;
 let postBoxStylesheet: CSSStyleSheet;
+let modalStylesheet: CSSStyleSheet;
 
 let profileHeaderTemplate: DocumentFragment;
 let cardTemplate: DocumentFragment;
@@ -22,6 +24,7 @@ let timelineTemplate: DocumentFragment;
 let navigationSidebarTemplate: DocumentFragment;
 let postBoxTemplate: DocumentFragment;
 let tagInputTemplate: DocumentFragment;
+let settingsModalTemplate: DocumentFragment;
 
 let postSentEvent: CustomEvent;
 
@@ -77,7 +80,7 @@ export class ProfileHeader extends HTMLElement {
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "acctid") {
-			mastodon.getAccount(newValue).then((account) => {
+			mastodon.getAccount(env.instanceUrl, newValue, env.token).then((account) => {
 				this.setAccount(account);
 			});
 		} else if(name == "acct") {
@@ -204,7 +207,7 @@ export class StatusFooter extends HTMLElement {
 
 	connectReplyButton(target: HTMLElement) {
 		this.#replyButton.addEventListener("click", (event) => {
-			const replyBox = new ReplyBox;
+			const replyBox = new ReplyBox(env.instanceUrl); // TODO: make this un-hardcoded
 			replyBox.setReplyingToId(this.#statusId);
 			target.after(replyBox);
 		})
@@ -321,6 +324,8 @@ export class StatusContentWarned extends StatusContent {
 export class Status extends Card {
 	static observedAttributes = ["statusid", "sensitive", "spoilertext"];
 
+	instanceUrl: URL;
+
 	header: StatusHeader;
 	footer: StatusFooter;
 	content: StatusContent;
@@ -329,8 +334,10 @@ export class Status extends Card {
 	#time: HTMLTimeElement;
 	#postUrl: HTMLAnchorElement;
 
-	constructor() {
+	constructor(instanceUrl: URL) {
 		super();
+
+		this.instanceUrl = instanceUrl;
 	}
 
 	setStatus(status: mastodon.Status, reblog?: boolean, reblogger?: mastodon.Account) {
@@ -390,7 +397,7 @@ export class Status extends Card {
 			this.content.setContent(renderEmojis(status.content, status.emojis));
 
 			// TODO: separate these into a footer component
-			this.#postUrl.href = new URL(`@${status.account.acct}/${status.id}`, instanceUrl).href;
+			this.#postUrl.href = new URL(`@${status.account.acct}/${status.id}`, this.instanceUrl).href;
 			this.#link.href = `/status/?id=${status.id}`;
 			this.#time.dateTime = status.createdAt.toISOString();
 			this.#time.innerText = getRelativeTimeString(status.createdAt);
@@ -495,19 +502,22 @@ export class LinkCard extends HTMLElement {
 export class Timeline extends HTMLElement {
 	static observedAttributes = ["type", "tag", "acctid", "boosts", "replies"];
 
+	instanceUrl: URL;
+
 	#loadMoreButton: HTMLButtonElement;
 	
 	#lastPostId: string;
 	#showBoosts: boolean;
 	#showReplies: boolean;
 	
-	constructor() {
+	constructor(instanceUrl: URL) {
 		super();
+
+		this.instanceUrl = instanceUrl;
 	}
 
 	prependStatus(status: mastodon.Status) {
-		console.log("bleh");
-		const statusElement = new Status;
+		const statusElement = new Status(this.instanceUrl);
 		status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
 		this.shadowRoot.prepend(statusElement);
 	}
@@ -519,7 +529,7 @@ export class Timeline extends HTMLElement {
 			if((!this.#showReplies && status.inReplyToId) || (!this.#showBoosts && status.reblog)) {
 				continue;
 			} else {
-				const statusElement = new Status;
+				const statusElement = new Status(this.instanceUrl);
 				status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
 				statuses.appendChild(statusElement);
 			}
@@ -535,7 +545,7 @@ export class Timeline extends HTMLElement {
 	}
 
 	loadTimeline(type: string, value?: string) {
-		console.log(`lt: ${type} ${value}`);
+		console.log(`lt: ${this.instanceUrl} ${type} ${value}`);
 		switch(type) {
 			case "account":
 				mastodon.getAccountTimeline(value, this.#lastPostId).then((data: mastodon.Status[]) => {
@@ -543,12 +553,17 @@ export class Timeline extends HTMLElement {
 				});
 				break;
 			case "tag":
-				mastodon.getHashtagTimeline(value, token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.getHashtagTimeline(this.instanceUrl, value, token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
 			case "public":
-				mastodon.getPublicTimeline(token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.getPublicTimeline(this.instanceUrl, token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+					this.addStatuses(data);
+				});
+				break;
+			case "local":
+				mastodon.getPublicTimeline(this.instanceUrl, token ?? null, true, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data) => {
 					this.addStatuses(data);
 				});
 				break;
@@ -558,7 +573,7 @@ export class Timeline extends HTMLElement {
 				});
 				break;
 			default:
-				mastodon.getTimeline(instanceUrl, mastodon.Timelines[type as keyof typeof mastodon.Timelines], undefined, undefined).then((data: any) => {
+				mastodon.getTimeline(this.instanceUrl, mastodon.Timelines[type as keyof typeof mastodon.Timelines], undefined, undefined).then((data: any) => {
 					this.addStatuses(data);
 				});
 		}
@@ -909,10 +924,14 @@ export class PostBox extends Card {
 }
 
 export class ReplyBox extends PostBox {
+	instanceUrl: URL;
+	
 	#replyId: string;
 	
-	constructor() {
+	constructor(instanceUrl: URL) {
 		super();
+
+		this.instanceUrl = instanceUrl;
 	}
 
 	post() {
@@ -932,7 +951,7 @@ export class ReplyBox extends PostBox {
 
 		mastodon.postStatus(postText, undefined, undefined, undefined, undefined, undefined, this.#replyId).then((status) => {
 			console.log(status);
-			const newStatus = new Status;
+			const newStatus = new Status(this.instanceUrl);
 			newStatus.setStatus(status);
 			this.parentNode.insertBefore(newStatus, this.nextElementSibling);
 			this.remove();
@@ -950,9 +969,30 @@ export class ReplyBox extends PostBox {
 	}
 }
 
-export class HomeView extends HTMLElement {
+export class Modal extends HTMLElement {
 	constructor() {
 		super();
+	}
+
+	connectedCallback() {
+		const template = `<div id="bg"><div id="dialog"><button id="close">Close</button><slot></slot></div></div>`;
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, modalStylesheet];
+		shadow.innerHTML = template;
+
+		shadow.getElementById("close").addEventListener("click", (event) => {
+			this.remove();
+		});
+	}
+}
+
+export class HomeView extends HTMLElement {
+	instanceUrl: URL;
+	
+	constructor(instanceUrl: URL) {
+		super();
+
+		this.instanceUrl = instanceUrl;
 	}
 
 	connectedCallback() {
@@ -960,7 +1000,7 @@ export class HomeView extends HTMLElement {
 
 		const postBox = new PostBox();
 		
-		const homeTimelineObject = new Timeline();
+		const homeTimelineObject = new Timeline(this.instanceUrl);
 		homeTimelineObject.setAttribute("type", "home");
 
 		shadow.appendChild(postBox);
@@ -973,23 +1013,68 @@ export class HomeView extends HTMLElement {
 }
 
 export class PublicTimelineView extends HTMLElement {
-	constructor() {
+	instanceUrl: URL;
+
+	constructor(instanceUrl: URL) {
 		super();
+
+		this.instanceUrl = instanceUrl;
 	}
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
 
-		const publicTimelineObject = new Timeline();
+		const publicTimelineObject = new Timeline(this.instanceUrl);
 		publicTimelineObject.setAttribute("type", "public");
 
 		shadow.appendChild(publicTimelineObject);
 	}
 }
 
+export class LocalTimelineView extends HTMLElement {
+	instanceUrl: URL;
+
+	constructor(instanceUrl: URL) {
+		super();
+
+		this.instanceUrl = instanceUrl;
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+
+		const localTimeline = new Timeline(this.instanceUrl);
+		localTimeline.setAttribute("type", "local");
+
+		shadow.appendChild(localTimeline);
+	}
+}
+
 export class AccountView extends HTMLElement {
+	instanceUrl: URL;
+
 	profileHeader: ProfileHeader;
 	accountTimeline: Timeline;
+
+	constructor(instanceUrl: URL) {
+		super();
+
+		this.instanceUrl = instanceUrl;
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+
+		this.profileHeader = new ProfileHeader();
+		this.accountTimeline = new Timeline(this.instanceUrl);
+		
+		shadow.appendChild(this.profileHeader);
+		shadow.appendChild(this.accountTimeline);
+	}
+}
+
+export class ModalSettingsView extends HTMLElement {
+	instanceUrlInput: HTMLInputElement;
 
 	constructor() {
 		super();
@@ -997,12 +1082,12 @@ export class AccountView extends HTMLElement {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
+		shadow.appendChild(settingsModalTemplate.cloneNode(true));
 
-		this.profileHeader = new ProfileHeader();
-		this.accountTimeline = new Timeline();
-		
-		shadow.appendChild(this.profileHeader);
-		shadow.appendChild(this.accountTimeline);
+		this.instanceUrlInput = shadow.getElementById("setting-instance-url") as HTMLInputElement;
+
+		this.instanceUrlInput.placeholder = env.instanceUrl.href;
+		this.instanceUrlInput.value = localStorage.getItem("instanceUrl");
 	}
 }
 
@@ -1036,6 +1121,7 @@ async function initTemplates() {
 	navigationSidebarTemplate = await getTemplate("/templates/navigation.html", "sidebar");
 	postBoxTemplate = await getTemplate("/templates/post.html", "postbox");
 	tagInputTemplate = await getTemplate("/templates/post.html", "taginput");
+	settingsModalTemplate = await getTemplate("/templates/modal.html", "settings");
 }
 
 async function initStylesheets() {
@@ -1046,6 +1132,7 @@ async function initStylesheets() {
 	timelineStylesheet = await getStylesheet("/css/components/timeline.css");
 	navigationStylesheet = await getStylesheet("/css/components/navigation.css");
 	postBoxStylesheet = await getStylesheet("/css/components/post-box.css");
+	modalStylesheet = await getStylesheet("/css/components/modal.css");
 }
 
 function initComponents() {
@@ -1069,9 +1156,14 @@ function initComponents() {
 			customElements.define("app-post-box", PostBox);
 			customElements.define("app-reply-box", ReplyBox);
 
+			customElements.define("app-modal", Modal);
+
 			customElements.define("app-view-home", HomeView);
 			customElements.define("app-view-public", PublicTimelineView);
+			customElements.define("app-view-local", LocalTimelineView);
 			customElements.define("app-view-account", AccountView);
+
+			customElements.define("app-modal-view-settings", ModalSettingsView);
 		});
 	});
 }

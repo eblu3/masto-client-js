@@ -108,8 +108,6 @@ body > header {
 	background-color: var(--background-color);
 
 	vertical-align: center;
-
-	z-index: 99;
 }
 
 app-nav-sidebar {
@@ -129,4 +127,12 @@ app-timeline {
 	display: block;
 
 	margin: 0 1em;
+}
+
+app-modal {
+	width: 100vw;
+	height: 100vh;
+
+	position: absolute;
+	z-index: 999;
 }
