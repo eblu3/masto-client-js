@@ -8,6 +8,7 @@ export * as domainBlocks from "./domainBlocks.mjs";
 export * as filters from "./filters.mjs";
 export * as reports from "./reports.mjs";
 export * as followRequests from "./followRequests.mjs";
+export * as endorsements from "./endorsements.mjs";
 
 export async function registerAccount(
 	instanceUrl: URL,
