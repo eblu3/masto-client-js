@@ -317,6 +317,19 @@ export class ExtendedDescription {
 	}
 }
 
+export class FamiliarFollowers {
+	id: string;
+	accounts: Account[];
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.accounts = [];
+		for(const account of data["accounts"]) {
+			this.accounts.push(new Account(account));
+		}
+	}
+}
+
 export class FeaturedTag {
 	id: string;
 	name: string;
@@ -1346,7 +1359,7 @@ export async function getAccountStatuses(
 	token?: string,
 	maxId?: string,
 	minId?: string,
-	limit: number = 20,
+	limit?: number,
 	onlyMedia?: boolean,
 	excludeReplies?: boolean,
 	excludeReblogs?: boolean,
@@ -1419,7 +1432,7 @@ export async function getAccountFollowers(
 	instanceUrl: URL,
 	id: string,
 	token?: string,
-	limit: number = 40
+	limit?: number
 ): Promise<Account[]> {
 	const endpoint = new URL(`/api/v1/accounts/${id}/followers`, instanceUrl);
 	let response: Response;
@@ -1466,7 +1479,7 @@ export async function getAccountFollowing(
 	instanceUrl: URL,
 	id: string,
 	token?: string,
-	limit: number = 40
+	limit?: number
 ): Promise<Account[]> {
 	const endpoint = new URL(`/api/v1/accounts/${id}/following`, instanceUrl);
 	let response: Response;
@@ -1841,6 +1854,113 @@ export async function getRelationships(instanceUrl: URL, token: string, ids?: st
 	}
 }
 
+export async function findFamiliarFollowers(instanceUrl: URL, token: string, ids?: string[]): Promise<FamiliarFollowers[]> {
+	const endpoint = new URL("/api/v1/accounts/familiar_followers", instanceUrl);
+
+	if(ids) {
+		for(const id of ids) {
+			endpoint.searchParams.append("id[]", id);
+		}
+	}
+
+	const response = await fetch(endpoint, {
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: FamiliarFollowers[] = [];
+
+		for(const followList of json) {
+			out.push(new FamiliarFollowers(followList));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function searchForAccounts(
+	instanceUrl: URL,
+	token: string,
+	query: string,
+	limit: number = 40,
+	offset?: number,
+	resolve?: boolean,
+	following?: boolean
+): Promise<Account[]> {
+	const endpoint = new URL("/api/v1/accounts/search", instanceUrl);
+
+	endpoint.searchParams.set("q", query);
+	if(limit) {
+		if(limit > 0 && limit <= 80) {
+			endpoint.searchParams.set("limit", String(limit));
+		} else {
+			console.warn(`You specified ${limit} accounts but Mastodon only supports returning between 1 and 80 accounts from this endpoint. Defaulting to 40.`);
+		}
+	}
+	if(offset) {
+		endpoint.searchParams.set("offset", String(offset));
+	}
+	if(resolve != undefined) {
+		endpoint.searchParams.set("resolve", String(resolve));
+	}
+	if(following != undefined) {
+		endpoint.searchParams.set("following", String(following));
+	}
+
+	const response = await fetch(endpoint, {
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	});
+
+	if(response.ok) {
+		const json = await response.json();
+		let out: Account[] = [];
+
+		for(const account of json) {
+			out.push(new Account(account));
+		}
+
+		return out;
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
+export async function lookupUsername(instanceUrl: URL, acct: string): Promise<Account> {
+	const endpoint = new URL("/api/v1/accounts/lookup", instanceUrl);
+	
+	endpoint.searchParams.set("acct", acct);
+
+	const response = await fetch(endpoint);
+
+	if(response.ok) {
+		return new Account(await response.json());
+	} else {
+		try {
+			const json = await response.json();
+			console.error(json["error"]);
+		} catch {
+			console.error(response.statusText);
+		}
+	}
+}
+
 // == TIMELINES == //
 
 export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, startAtId?: string): Promise<Status[]> | null {
@@ -2192,52 +2312,6 @@ export async function getStatus(id: string): Promise<[Status, boolean, Account]>
 		const status = new Status(await response.json());
 
 		return status.reblog ? [status.reblog, true, status.account] : [status, false, undefined];
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-export async function getAccountByHandle(acct: string) {
-	try {
-		let response;
-
-		if (env.token) {
-			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, env.instanceUrl), {
-				headers: {
-					"Authorization": `Bearer ${env.token}`
-				}
-			});
-		} else {
-			response = await fetch(new URL(`/api/v1/accounts/lookup?acct=${acct}`, env.instanceUrl));
-		}
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		const account = new Account(await response.json());
-
-		return account;
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-export async function getCurrentAccount(): Promise<CredentialAccount> | null {
-	try {
-		let response = await fetch(new URL("/api/v1/accounts/verify_credentials", env.instanceUrl), {
-			headers: {
-				"Authorization": `Bearer ${env.token}`
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		return new CredentialAccount(await response.json());
 	} catch (error) {
 		console.error(error.message);
 		return null;

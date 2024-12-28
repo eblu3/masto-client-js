@@ -84,7 +84,7 @@ export class ProfileHeader extends HTMLElement {
 				this.setAccount(account);
 			});
 		} else if(name == "acct") {
-			mastodon.getAccountByHandle(newValue).then((account) => {
+			mastodon.lookupUsername(env.instanceUrl, newValue).then((account) => {
 				this.setAccount(account);
 			});
 		}
@@ -697,7 +697,7 @@ export class NavigationSidebar extends HTMLElement {
 
 		this.#youLink = shadow.getElementById("you-link") as HTMLAnchorElement;
 		
-		mastodon.getCurrentAccount().then((account) => {
+		mastodon.verifyCredentials(env.instanceUrl, env.token).then((account) => {
 			this.#youLink.href = `/user/?acct=@${account.acct}`;
 		})
 	}

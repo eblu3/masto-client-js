@@ -79,7 +79,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			viewTarget.appendChild(currentView);
 			(currentView as customElements.AccountView).accountTimeline.setAttribute("type", "account");
 			if(data.acct) {
-				mastodon.getAccountByHandle(data.acct).then((account) => {
+				mastodon.lookupUsername(instanceUrl, data.acct).then((account) => {
 					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
 				getAccountIdFromHandle(data.acct).then((id) => {
