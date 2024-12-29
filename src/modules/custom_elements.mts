@@ -557,22 +557,22 @@ export class Timeline extends HTMLElement {
 				});
 				break;
 			case "tag":
-				mastodon.getHashtagTimeline(this.instanceUrl, value, token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.timelines.getHashtagTimeline(this.instanceUrl, value, token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
 			case "public":
-				mastodon.getPublicTimeline(this.instanceUrl, token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.timelines.getPublicTimeline(this.instanceUrl, token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
 			case "local":
-				mastodon.getPublicTimeline(this.instanceUrl, token ?? null, true, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data) => {
+				mastodon.timelines.getPublicTimeline(this.instanceUrl, token ?? null, true, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data) => {
 					this.addStatuses(data);
 				});
 				break;
 			case "home":
-				mastodon.getHomeTimeline(token, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.timelines.getHomeTimeline(this.instanceUrl, token, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
