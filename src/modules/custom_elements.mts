@@ -223,9 +223,9 @@ export class StatusFooter extends HTMLElement {
 		this.#boostButton.addEventListener("click", (event) => {
 			if(this.#statusId) {
 				if(this.#boosted) {
-					mastodon.unboostStatus(this.#statusId).then(() => this.setBoosted(false));
+					mastodon.statuses.unboostStatus(env.instanceUrl, env.token, this.#statusId).then(() => this.setBoosted(false));
 				} else {
-					mastodon.boostStatus(this.#statusId).then((status) => {
+					mastodon.statuses.boostStatus(env.instanceUrl, env.token, this.#statusId).then((status) => {
 						this.setBoosted(true);
 					});
 				}
@@ -235,9 +235,9 @@ export class StatusFooter extends HTMLElement {
 		this.#favoriteButton.addEventListener("click", (event) => {
 			if(this.#statusId) {
 				if(this.#faved) {
-					mastodon.unfavoriteStatus(this.#statusId).then(() => this.setFaved(false));
+					mastodon.statuses.unfavouriteStatus(env.instanceUrl, env.token, this.#statusId).then(() => this.setFaved(false));
 				} else {
-					mastodon.favoriteStatus(this.#statusId).then((status) => {
+					mastodon.statuses.favouriteStatus(env.instanceUrl, env.token, this.#statusId).then((status) => {
 						this.setFaved(true);
 					});
 				}
@@ -415,8 +415,12 @@ export class Status extends Card {
 	}
 
 	setStatusById(statusId: string) {
-		mastodon.getStatus(statusId).then(([status, reblog, reblogger]) => {
-			this.setStatus(status, reblog, reblogger);
+		mastodon.statuses.getStatus(env.instanceUrl, statusId, env.token).then((status) => {
+			if(status.reblog) {
+				this.setStatus(status.reblog, true, status.account);
+			} else {
+				this.setStatus(status);
+			}
 		});
 	}
 
@@ -747,7 +751,7 @@ export class PostBox extends Card {
 			postText += "\n\n" + tags;
 		}
 
-		mastodon.postStatus(postText).then((status) => {
+		mastodon.statuses.postStatus(env.instanceUrl, env.token, undefined, postText).then((status) => {
 			postSentEvent = new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
 				status: status
 			}})
@@ -949,10 +953,9 @@ export class ReplyBox extends PostBox {
 			postText += "\n\n" + tags;
 		}
 
-		mastodon.postStatus(postText, undefined, undefined, undefined, undefined, undefined, this.#replyId).then((status) => {
-			console.log(status);
+		mastodon.statuses.postStatus(this.instanceUrl, env.token, undefined, postText, undefined, undefined, this.#replyId).then((status) => {
 			const newStatus = new Status(this.instanceUrl);
-			newStatus.setStatus(status);
+			newStatus.setStatus(status as mastodon.Status);
 			this.parentNode.insertBefore(newStatus, this.nextElementSibling);
 			this.remove();
 		})

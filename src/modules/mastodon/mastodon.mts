@@ -2,7 +2,9 @@ import * as env from "../../env.mjs";
 
 export * as apps from "./apps/apps.mjs";
 export * as accounts from "./accounts/accounts.mjs";
+export * as profile from "./profile/profile.mjs";
 export * as instance from "./instance/instance.mjs";
+export * as statuses from "./statuses/statuses.mjs";
 
 // === ENUMS === //
 
@@ -44,6 +46,13 @@ export enum ReportCategory {
 	Legal = "legal",
 	Violation = "violation",
 	Other = "other"
+}
+
+export enum StatusVisibility {
+	Public = "public",
+	Unlisted = "unlisted",
+	Private = "private",
+	Direct = "direct"
 }
 
 export enum SuggestionSource {
@@ -308,6 +317,22 @@ export class CredentialApplication extends Application {
 	}
 }
 
+export class Context {
+	ancestors: Status[];
+	descendants: Status[];
+
+	constructor(data: any) {
+		this.ancestors = [];
+		for(const status of data["ancestors"]) {
+			this.ancestors.push(new Status(status));
+		}
+		this.descendants = [];
+		for(const status of data["descendants"]) {
+			this.descendants.push(new Status(status));
+		}
+	}
+}
+
 /**
  * Represents a custom emoji.
  */
@@ -530,7 +555,7 @@ export class MediaAttachment {
 	/** The type of the attachment. */
 	type: AttachmentType;
 	/** The location of the original full-size attachment. */
-	url: URL;
+	url?: URL;
 	/** The location of a scaled-down preview of the attachment. */
 	previewUrl: URL | null;
 	/** The location of the full-size original attachment on the remote website. */
@@ -545,7 +570,9 @@ export class MediaAttachment {
 	constructor(data: any) {
 		this.id = data["id"];
 		this.type = data["type"];
-		this.url = new URL(data["url"]);
+		try {
+			this.url = new URL(data["url"]);
+		} catch {}
 		try {
 			this.previewUrl = new URL(data["preview_url"]);
 		} catch {
@@ -559,6 +586,52 @@ export class MediaAttachment {
 		this.meta = data["meta"];
 		this.description = data["description"];
 		this.blurhash = data["blurhash"];
+	}
+}
+
+export class Poll {
+	id: string;
+	expiresAt: Date | null;
+	expired: boolean;
+	multiple: boolean;
+	votesCount: number;
+	votersCount: number | null;
+	options: PollOption[];
+	emojis: CustomEmoji[];
+	voted?: boolean;
+	ownVotes?: number[];
+
+	constructor(data: any) {
+		this.id = data["id"];
+		try {
+			this.expiresAt = new Date(data["expires_at"]);
+		} catch {
+			this.expiresAt = null;
+		}
+		this.expired = data["expired"];
+		this.multiple = data["multiple"];
+		this.votesCount = data["votes_count"];
+		this.votersCount = data["voters_count"];
+		this.options = [];
+		for(const option of data["options"]) {
+			this.options.push(new PollOption(option));
+		}
+		this.emojis = [];
+		for(const emoji of data["emojis"]) {
+			this.emojis.push(new CustomEmoji(data));
+		}
+		this.voted = data["voted"] ?? undefined;
+		this.ownVotes = data["own_votes"] ?? undefined;
+	}
+}
+
+export class PollOption {
+	title: string;
+	votesCount: number | null;
+
+	constructor(data: any) {
+		this.title = data["title"];
+		this.votesCount = data["votes_count"];
 	}
 }
 
@@ -802,6 +875,25 @@ export class Rule {
 	}
 }
 
+export class ScheduledStatus {
+	id: string;
+	scheduledAt: Date;
+	params: Map<string, string | Map<string, string[] | string | boolean> | boolean | StatusVisibility | number | null>;
+	mediaAttachments: MediaAttachment[];
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.scheduledAt = new Date(data["scheduled_at"]);
+		for(const [key, value] of Object.entries(data["params"])) {
+			this.params.set(key, value as string | Map<string, string[] | string | boolean> | boolean | StatusVisibility | number | null);
+		}
+		this.mediaAttachments = [];
+		for(const attachment of data["media_attachments"]) {
+			this.mediaAttachments.push(new MediaAttachment(attachment));
+		}
+	}
+}
+
 /**
  * Represents a status posted by an account.
  */
@@ -952,6 +1044,49 @@ export class StatusTag {
 	}
 }
 
+export class StatusEdit {
+	content: DocumentFragment;
+	spoilerText: DocumentFragment;
+	sensitive: boolean;
+	createdAt: Date;
+	account: Account;
+	poll?: {
+		options: {title: string}[]
+	};
+	mediaAttachments: MediaAttachment[];
+	emojis: CustomEmoji[];
+
+	constructor(data: any) {
+		const domParser = new DOMParser();
+		this.content = domParser.parseFromString(data["content"], "text/html");
+		this.spoilerText = domParser.parseFromString(data["spoiler_text"], "text/html");
+		this.sensitive = data["sensitive"];
+		this.createdAt = new Date(data["created_at"]);
+		this.account = new Account(data["account"]);
+		this.poll = data["poll"] ?? undefined;
+		this.mediaAttachments = [];
+		for(const attachment of data["media_attachments"]) {
+			this.mediaAttachments.push(new MediaAttachment(attachment));
+		}
+		this.emojis = [];
+		for(const emoji of data["emojis"]) {
+			this.emojis.push(new CustomEmoji(emoji));
+		}
+	}
+}
+
+export class StatusSource {
+	id: string;
+	text: string;
+	spoilerText: string;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.text = data["text"];
+		this.spoilerText = data["spoiler_text"];
+	}
+}
+
 export class Suggestion {
 	source?: SuggestionSourceDeprecated;
 	sources?: SuggestionSource[];
@@ -1015,6 +1150,60 @@ export class Token {
 		this.tokenType = data["token_type"];
 		this.scope = (data["scope"] as string).split(" ");
 		this.createdAt = new Date(Number(data["created_at"])*1000);
+	}
+}
+
+export class Translation {
+	content: DocumentFragment;
+	spoilerText: string;
+	poll?: TranslationPoll;
+	mediaAttachments: TranslationAttachment[];
+	detectedSourceLanguage: Intl.Locale;
+	provider: string;
+
+	constructor(data: any) {
+		this.content = new DOMParser().parseFromString(data["content"], "text/html");
+		this.spoilerText = data["spoiler_text"];
+		try {
+			this.poll = new TranslationPoll(data["poll"]);
+		} catch {}
+		this.mediaAttachments = [];
+		for(const attachment of data["media_attachments"]) {
+			this.mediaAttachments.push(new TranslationAttachment(attachment));
+		}
+		this.detectedSourceLanguage = new Intl.Locale(data["detected_source_language"]);
+		this.provider = data["provider"];
+	}
+}
+
+export class TranslationAttachment {
+	id: string;
+	description: string;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.description = data["description"];
+	}
+}
+
+export class TranslationPoll {
+	id: string;
+	options: TranslationPollOption[];
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.options = [];
+		for(const option of data["options"]) {
+			this.options.push(new TranslationPollOption(option));
+		}
+	}
+}
+
+export class TranslationPollOption {
+	title: string;
+
+	constructor(data: any) {
+		this.title = data["title"];
 	}
 }
 
@@ -1345,168 +1534,6 @@ export async function getHomeTimeline(
 
 		return processedStatuses;
 	} catch(error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-export async function getStatus(id: string): Promise<[Status, boolean, Account]> | null {
-	try {
-		let response;
-
-		if (env.token) {
-			response = await fetch(new URL(`/api/v1/statuses/${id}`, env.instanceUrl), {
-				headers: {
-					"Authorization": `Bearer ${env.token}`
-				}
-			});
-		} else {
-			response = await fetch(new URL(`/api/v1/statuses/${id}`, env.instanceUrl));
-		}
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		const status = new Status(await response.json());
-
-		return status.reblog ? [status.reblog, true, status.account] : [status, false, undefined];
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-// == POST == //
-
-export async function postStatus(
-	status?: string,
-	mediaIds?: string[],
-	pollOptions?: string[],
-	pollExpiresIn?: number,
-	pollMultipleChoice?: boolean,
-	pollHideTotals?: boolean,
-	inReplyToId?: string,
-	isSensitive?: boolean,
-	spoilerText?: string,
-	visibility?: string,
-	language?: string,
-	scheduledAt?: string
-): Promise<Status> | null {
-	try {
-		let params = new URLSearchParams([["status", status]]);
-
-		if (inReplyToId) {
-			params.append("in_reply_to_id", inReplyToId);
-		}
-
-		let response = await fetch(new URL(`/api/v1/statuses?${params.toString()}`, env.instanceUrl), {
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${env.token}`
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		const postedStatus = new Status(await response.json());
-
-		return postedStatus;
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-export async function favoriteStatus(id: string): Promise<Status> | null {
-	console.log(`Favoriting status ${id}...`);
-	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/favourite`, env.instanceUrl), {
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${env.token}`
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		console.log("Status favorited!");
-
-		return new Status(await response.json());
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-export async function unfavoriteStatus(id: string): Promise<Status> | null {
-	console.log(`Removing favorite from status ${id}...`);
-	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/unfavourite`, env.instanceUrl), {
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${env.token}`
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		console.log("Status unfavorited!");
-
-		return new Status(await response.json());
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-
-// TODO: change visibility to enum and implement it
-export async function boostStatus(id: string, visibility?: string): Promise<Status> | null {
-	console.log(`Boosting status ${id}...`);
-	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/reblog`, env.instanceUrl), {
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${env.token}`
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		console.log("Status boosted!");
-
-		return new Status(await response.json());
-	} catch (error) {
-		console.error(error.message);
-		return null;
-	}
-}
-export async function unboostStatus(id: String): Promise<Status> | null {
-	console.log(`Removing boost from status ${id}...`);
-	try {
-		let response = await fetch(new URL(`/api/v1/statuses/${id}/unreblog`, env.instanceUrl), {
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${env.token}`
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
-
-		console.log("Status unboosted!");
-
-		return new Status(await response.json());
-	} catch (error) {
 		console.error(error.message);
 		return null;
 	}
