@@ -19,9 +19,10 @@ let token: string;
 let appInfo: mastodon.CredentialApplication;
 let authCode: string;
 let userToken: mastodon.Token;
+let preferences: Map<string, string | boolean | null>;
 
 const viewTarget = document.getElementById("view-target");
-const initialState = {name: "public"};
+const initialState = {name: "home"};
 
 let currentView: HTMLElement;
 let modal: customElements.Modal;
@@ -175,9 +176,8 @@ if(localStorage.getItem("instanceUrl")) {
 } else {
 	instanceUrl = env.instanceUrl;
 }
-token = env.token;
 
-console.log(instanceUrl);
+token = env.token;
 
 if(localStorage.getItem("appInfo")) {
 	appInfo = JSON.parse(localStorage.getItem("appInfo")) as mastodon.CredentialApplication;
@@ -188,6 +188,10 @@ if(localStorage.getItem("authCode")) {
 if(localStorage.getItem("userToken")) {
 	userToken = JSON.parse(localStorage.getItem("userToken")) as mastodon.Token;
 }
+
+mastodon.accounts.preferences.getUserPreferences(instanceUrl, token).then((prefs) => {
+	preferences = prefs;
+})
 
 initView();
 // mastodon.createApplication(instanceUrl, "thingy 3: god I hope this works", new URL("/auth", location.origin).href, "read", new URL("https://example.com")).then((app) => {

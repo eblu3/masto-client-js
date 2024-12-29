@@ -456,6 +456,18 @@ export class FilterKeyword {
 	}
 }
 
+export class FilterResult {
+	filter: Filter;
+	keywordMatches: String[] | null;
+	statusMatches: String[] | null;
+
+	constructor(data: any) {
+		this.filter = new Filter(data["filter"]);
+		this.keywordMatches = data["keyword_matches"];
+		this.statusMatches = data["status_matches"];
+	}
+}
+
 export class FilterStatus {
 	id: string;
 	statusId: string;
@@ -908,9 +920,9 @@ export class Status {
 	/** The account that authored this status. */
 	account: Account;
 	/** HTML-encoded status content. */
-	content: string;
+	content: DocumentFragment;
 	/** Visibility of this status. */
-	visibility: string; // TODO: make this an enum
+	visibility: StatusVisibility;
 	/** Is this status marked as sensitive content? */
 	sensitive: boolean;
 	/** Subject or summary line, below which status content is collapsed until expanded. */
@@ -918,11 +930,14 @@ export class Status {
 	/** Media that is attached to this status. */
 	mediaAttachments: MediaAttachment[]
 	/** The application used to post this status. */
-	application?: object
+	application?: {
+		name: string,
+		website: URL | null
+	}
 	/** Mentions of users within the status content. */
-	mentions: object[]
+	mentions: StatusMention[]
 	/** Hashtags used within the status content. */
-	tags: object[]
+	tags: StatusTag[]
 	/** Custom emoji to be used when rendering status content. */
 	emojis: CustomEmoji[]
 	/** How many boosts this status has received. */
@@ -940,7 +955,7 @@ export class Status {
 	/** The status being reblogged. */
 	reblog: Status | null;
 	/** The poll attached to the status. */
-	poll: object | null;
+	poll: Poll | null;
 	/** Preview card for links included within status content. */
 	card: PreviewCard | null;
 	/** Primary language of this status. */
@@ -960,7 +975,7 @@ export class Status {
 	/** If the current token has an authorized user: Have you pinned this status? Only appears if the status is pinnable. */
 	pinned?: boolean;
 	/** If the current token has an authorized user: The filter and keywords that matched this status. */
-	filtered?: object[];
+	filtered?: FilterResult[];
 
 	constructor(data: any | null) {
 		if(data == null) {
@@ -970,7 +985,14 @@ export class Status {
 			this.uri = data["uri"];
 			this.createdAt = new Date(data["created_at"]);
 			this.account = new Account(data["account"]);
-			this.content = data["content"];
+
+			const parsedContent = new DOMParser().parseFromString(data["content"], "text/html");
+			const parsedBodyElement = parsedContent.querySelector("body");
+			this.content = new DocumentFragment();
+			while(parsedBodyElement.hasChildNodes()) {
+				this.content.appendChild(parsedBodyElement.removeChild(parsedBodyElement.firstChild));
+			}
+
 			this.visibility = data["visibility"];
 			this.sensitive = data["sensitive"];
 			this.spoilerText = data["spoiler_text"];
@@ -978,7 +1000,10 @@ export class Status {
 			this.application = data["application"];
 			this.mentions = data["mentions"];
 			this.tags = data["tags"];
-			this.emojis = data["emojis"];
+			this.emojis = [];
+			for(const emoji of data["emojis"]) {
+				this.emojis.push(new CustomEmoji(emoji));
+			}
 			this.reblogsCount = data["reblogs_count"];
 			this.favouritesCount = data["favourites_count"];
 			this.repliesCount = data["replies_count"];
@@ -1006,9 +1031,9 @@ export class Status {
 				this.language = null;
 			}
 			this.text = data["text"];
-			try {
-				this.editedAt = new Date(data["editedAt"]);
-			} catch {
+			if(data["edited_at"] != null) {
+				this.editedAt = new Date(data["edited_at"]);
+			} else {
 				this.editedAt = null;
 			}
 			this.favourited = data["favourited"];

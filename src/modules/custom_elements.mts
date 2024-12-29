@@ -45,9 +45,9 @@ export class ProfileHeader extends HTMLElement {
 	setAccount(account: mastodon.Account) {
 		this.#container.style.setProperty("--header-url", `url(${account.header.href})`);
 		this.#avatar.src = account.avatar.href;
-		this.#displayName.innerHTML = (account.displayName || account.displayName != "") ? renderEmojis(account.displayName, account.emojis) : account.username;
+		this.#displayName.innerHTML = (account.displayName || account.displayName != "") ? renderEmojis(account.displayName, account.emojis) as string : account.username;
 		this.#handle.innerText = `@${account.acct}`;
-		this.#bio.innerHTML = renderEmojis(account.note, account.emojis);
+		this.#bio.innerHTML = renderEmojis(account.note, account.emojis) as string;
 
 		console.log(account.fields);
 
@@ -61,7 +61,7 @@ export class ProfileHeader extends HTMLElement {
 			}
 
 			rowName.outerHTML = `<th>${renderEmojis(field.name, account.emojis)}</th>`;
-			rowValue.innerHTML = renderEmojis(field.value, account.emojis);
+			rowValue.innerHTML = renderEmojis(field.value, account.emojis) as string;
 		}
 	}
 
@@ -255,9 +255,13 @@ export class StatusContent extends HTMLElement {
 		super();
 	}
 
-	setContent(content: string) {
+	setContent(content: string | DocumentFragment) {
 		if(this.postContent) {
-			this.postContent.innerHTML = content;
+			if(typeof content == "string") {
+
+			} else {
+				this.postContent.appendChild(content);
+			}
 		} else {
 			console.error(`post content element on ${this} doesn't exist!`);
 		}
@@ -353,7 +357,7 @@ export class Status extends Card {
 				this.header.setLabel("💬 reply");
 			}
 
-			let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) : status.account.username;
+			let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) as string : status.account.username;
 
 			this.header.setProfileInfo(
 				status.account.avatar,
@@ -394,10 +398,11 @@ export class Status extends Card {
 				this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 			}
 
+			console.log(status);
 			this.content.setContent(renderEmojis(status.content, status.emojis));
 
 			// TODO: separate these into a footer component
-			this.#postUrl.href = new URL(`@${status.account.acct}/${status.id}`, this.instanceUrl).href;
+			this.#postUrl.href = new URL(`/@${status.account.acct}/${status.id}`, this.instanceUrl).href;
 			this.#link.href = `/status/?id=${status.id}`;
 			this.#time.dateTime = status.createdAt.toISOString();
 			this.#time.innerText = getRelativeTimeString(status.createdAt);

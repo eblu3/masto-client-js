@@ -79,14 +79,27 @@ export function renderAttachments(attachments: mastodon.MediaAttachment[]): HTML
 	return out;
 }
 
-export function renderEmojis(str: string, emojis: mastodon.CustomEmoji[]) {
-	let processedString = str;
-
-	for(const emoji of emojis) {
-		processedString = processedString.replaceAll(`:${emoji.shortcode}:`, `<img class=\"custom-emoji\" src=\"${emoji.url.toString()}\" alt=\"${emoji.shortcode}\" />`);
+export function renderEmojis(input: string | DocumentFragment, emojis: mastodon.CustomEmoji[]): string | DocumentFragment {
+	if(typeof input === "string") {
+		for(const emoji of emojis) {
+			input = input.replaceAll(`:${emoji.shortcode}:`, `<img class=\"custom-emoji\" src=\"${emoji.url.toString()}\" alt=\"${emoji.shortcode}\" />`);
+		}
+	} else {
+		for(const emoji of emojis) {
+			input.childNodes.forEach((node) => {
+				console.log(node.textContent);
+				if(node.nodeType == node.ELEMENT_NODE && node.textContent.includes(`:${emoji.shortcode}:`)) {
+					const imgElem = document.createElement("img");
+					imgElem.classList.add("custom-emoji");
+					imgElem.src = emoji.url.href;
+					imgElem.alt = emoji.shortcode;
+					(node as HTMLElement).innerHTML = (node as HTMLElement).innerHTML.replaceAll(`:${emoji.shortcode}:`, imgElem.outerHTML);
+				}
+			});
+		}
 	}
 
-	return processedString;
+	return input;
 }
 
 function removeTrailingLink(postContent: string): string {
