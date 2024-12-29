@@ -11,6 +11,9 @@ export * as followRequests from "./followRequests.mjs";
 export * as endorsements from "./endorsements.mjs";
 export * as featuredTags from "./featuredTags.mjs";
 export * as preferences from "./preferences.mjs";
+export * as followedTags from "./followedTags.mjs";
+export * as suggestions from "./suggestions.mjs";
+export * as tags from "./tags.mjs";
 
 export async function registerAccount(
 	instanceUrl: URL,

@@ -46,6 +46,21 @@ export enum ReportCategory {
 	Other = "other"
 }
 
+export enum SuggestionSource {
+	Featured = "featured",
+	MostFollowed = "most_followed",
+	MostInteractions = "most_interactions",
+	SimilarToRecentlyFollowed = "similar_to_recently_followed",
+	FriendsOfFriends = "friends_of_friends"
+}
+
+// 4.2 is still getting updates as of the time of writing, so I'm including this anyway
+export enum SuggestionSourceDeprecated {
+	Staff = "staff",
+	PastInteractions = "past_interactions",
+	Global = "global"
+}
+
 export enum Timelines {
 	Public = "/api/v1/timelines/public",
 	Hashtag = "/api/v1/timelines/tag/",
@@ -934,6 +949,21 @@ export class StatusTag {
 	constructor(data: any) {
 		this.name = data["name"];
 		this.url = new URL(data["url"]);
+	}
+}
+
+export class Suggestion {
+	source?: SuggestionSourceDeprecated;
+	sources?: SuggestionSource[];
+	account: Account;
+
+	constructor(data: any) {
+		try {
+			this.sources = data["sources"];
+		} catch {
+			this.source = data["source"];
+		}
+		this.account = new Account(data["account"]);
 	}
 }
 
