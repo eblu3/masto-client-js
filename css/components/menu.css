@@ -8,8 +8,23 @@
 
 	border: 1px solid var(--accent-color);
 	border-radius: var(--radius-small);
+}
+
+ul {
+	padding: 0;
 
 	list-style: none;
+}
+
+ul::before {
+	content: attr(category);
+
+	margin: 0.5em 0;
+	
+	opacity: 0.75;
+
+	font-size: smaller;
+	font-weight: bold;
 }
 
 .menu-item {

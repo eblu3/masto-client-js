@@ -29,6 +29,17 @@ let settingsModalTemplate: DocumentFragment;
 
 let postSentEvent: CustomEvent;
 
+interface MenuCategory {
+	categoryName: string;
+	contents: MenuItem[];
+}
+
+interface MenuItem {
+	name: string;
+	onClick: () => void;
+	icon?: string | URL;
+}
+
 function clickOutsideHandler(event: Event, elementToDetect: HTMLElement) {
 	if(event.target != elementToDetect) {
 		elementToDetect.remove();
@@ -553,7 +564,7 @@ export class Timeline extends HTMLElement {
 					statusElement.header.menuButton.addEventListener("click", (event) => {
 						let localUrl: URL;
 						let remoteUrl: URL;
-						
+
 						if(status.reblog) {
 							localUrl = new URL(`/@${status.reblog.account.acct}/${status.reblog.id}`, this.instanceUrl);
 							remoteUrl = status.reblog.url;
@@ -563,10 +574,20 @@ export class Timeline extends HTMLElement {
 						}
 						
 						const menu = new Menu([
-							{name: "log status id", onClick: () => {console.log(status.id)}, icon: "🪪"},
-							{name: "log status content", onClick: () => {console.log(status.content)}, icon: "📄"},
-							{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "🌐"},
-							{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "🌐"}
+							{
+								categoryName: "Debug",
+								contents: [
+									{name: "Log status ID", onClick: () => {console.log(status.id)}, icon: "🪪"},
+									{name: "Log status content", onClick: () => {console.log(status.content)}, icon: "📄"}
+								]
+							},
+							{
+								categoryName: "Instance",
+								contents: [
+									{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "🌐"},
+									{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "🌐"}
+								]
+							}
 						]);
 						const viewTarget = document.getElementById("view-target");
 						if(viewTarget) {
@@ -1040,24 +1061,17 @@ export class Modal extends HTMLElement {
 }
 
 export class Menu extends HTMLElement {
-	options: {name: string, onClick: () => void, icon?: string | URL}[];
+	options: MenuCategory[] | MenuItem[];
 	menuRoot: HTMLUListElement;
 	
-	constructor(options: {name: string, onClick: () => void, icon?: string | URL}[]) {
+	constructor(options: MenuCategory[] | MenuItem[]) {
 		super();
 
 		this.options = options;
 	}
 
-	connectedCallback() {
-		const template = `<ul id="root" role="menu"></ul>`;
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, menuStylesheet];
-		shadow.innerHTML = template;
-
-		this.menuRoot = shadow.getElementById("root") as HTMLUListElement;
-
-		for(const option of this.options) {
+	addOptions(options: MenuItem[], target: HTMLUListElement) {
+		for(const option of options) {
 			const menuItem = document.createElement("li");
 			menuItem.classList.add("menu-item");
 			menuItem.role = "menuitem";
@@ -1076,7 +1090,27 @@ export class Menu extends HTMLElement {
 				menuItem.prepend(icon);
 			}
 			menuItem.addEventListener(("click"), option.onClick);
-			this.menuRoot.appendChild(menuItem);
+			target.appendChild(menuItem);
+		}
+	}
+	
+	connectedCallback() {
+		const template = `<ul id="root" role="menu"></ul>`;
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, menuStylesheet];
+		shadow.innerHTML = template;
+
+		this.menuRoot = shadow.getElementById("root") as HTMLUListElement;
+
+		if("categoryName" in this.options[0]) {
+			for(const category of this.options as MenuCategory[]) {
+				const categoryList = document.createElement("ul");
+				categoryList.setAttribute("category", category.categoryName);
+				this.addOptions(category.contents, categoryList);
+				this.menuRoot.appendChild(categoryList);
+			}
+		} else {
+			this.addOptions(this.options as MenuItem[], this.menuRoot);
 		}
 	}
 }
