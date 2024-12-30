@@ -467,6 +467,54 @@ export class Status extends Card {
 		} else {
 			this.setStatus(this.status);
 		}
+
+		this.header.menuButton.addEventListener("click", (event) => {
+			console.log(event);
+			
+			let localUrl: URL;
+			let remoteUrl: URL;
+
+			if(this.isReblog) {
+				localUrl = new URL(`/@${this.status.reblog.account.acct}/${this.status.reblog.id}`, this.instanceUrl);
+				remoteUrl = this.status.reblog.url;
+			} else {
+				localUrl = new URL(`/@${this.status.account.acct}/${this.status.id}`, this.instanceUrl);
+				remoteUrl = this.status.url;
+			}
+			
+			const menu = new Menu([
+				{
+					categoryName: "Debug",
+					contents: [
+						{name: "Log status ID", onClick: () => {console.log(this.status.id)}, icon: "id_card"},
+						{name: "Log status content", onClick: () => {console.log(this.status.content)}, icon: "description"}
+					]
+				},
+				{
+					categoryName: "Instance",
+					contents: [
+						{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language"},
+						{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language"}
+					]
+				}
+			]);
+			const viewTarget = document.getElementById("view-target");
+			if(viewTarget) {
+				menu.style.top = `${this.header.menuButton.offsetTop - viewTarget.scrollTop}px`;
+				menu.style.left = `${this.header.menuButton.offsetLeft - viewTarget.scrollLeft}px`;
+			} else {
+				menu.style.top = `${this.header.menuButton.offsetTop}px`;
+				menu.style.left = `${this.header.menuButton.offsetLeft}px`;
+			}
+			this.parentElement.appendChild(menu);
+
+			// we put the event listener on a timeout so that it doesn't try to detect a click before the menu opens
+			setTimeout(() => {
+				window.addEventListener("click", (event) => {
+					clickOutsideHandler(event, menu);
+				});
+			}, 50);
+		});
 	}
 }
 
@@ -583,53 +631,6 @@ export class Timeline extends HTMLElement {
 				status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status) : statusElement = new Status(this.instanceUrl, status);
 
 				statuses.appendChild(statusElement);
-				setTimeout(() => {
-					statusElement.header.menuButton.addEventListener("click", (event) => {
-						let localUrl: URL;
-						let remoteUrl: URL;
-
-						if(status.reblog) {
-							localUrl = new URL(`/@${status.reblog.account.acct}/${status.reblog.id}`, this.instanceUrl);
-							remoteUrl = status.reblog.url;
-						} else {
-							localUrl = new URL(`/@${status.account.acct}/${status.id}`, this.instanceUrl);
-							remoteUrl = status.url;
-						}
-						
-						const menu = new Menu([
-							{
-								categoryName: "Debug",
-								contents: [
-									{name: "Log status ID", onClick: () => {console.log(status.id)}, icon: "id_card"},
-									{name: "Log status content", onClick: () => {console.log(status.content)}, icon: "description"}
-								]
-							},
-							{
-								categoryName: "Instance",
-								contents: [
-									{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language"},
-									{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language"}
-								]
-							}
-						]);
-						const viewTarget = document.getElementById("view-target");
-						if(viewTarget) {
-							menu.style.top = `${statusElement.header.menuButton.offsetTop - viewTarget.scrollTop}px`;
-							menu.style.left = `${statusElement.header.menuButton.offsetLeft - viewTarget.scrollLeft}px`;
-						} else {
-							menu.style.top = `${statusElement.header.menuButton.offsetTop}px`;
-							menu.style.left = `${statusElement.header.menuButton.offsetLeft}px`;
-						}
-						this.appendChild(menu);
-
-						// we put the event listener on a timeout so that it doesn't try to detect a click before the menu opens
-						setTimeout(() => {
-							window.addEventListener("click", (event) => {
-								clickOutsideHandler(event, menu);
-							});
-						}, 50);
-					});
-				}, 250);
 			}
 		}
 
@@ -677,6 +678,15 @@ export class Timeline extends HTMLElement {
 			case "home":
 				mastodon.timelines.getHomeTimeline(this.instanceUrl, token, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
+					mastodon.timelines.streaming.establishWebSocketConnection(this.instanceUrl, env.token, mastodon.timelines.streaming.Streams.User, undefined, undefined, true).addEventListener("message", (message) => {
+						const data = JSON.parse(message.data);
+						const event = data["event"] as string;
+						const payload = JSON.parse(data.payload);
+
+						if(event == mastodon.timelines.streaming.Events.NewStatus) {
+							this.prependStatus(new mastodon.Status(payload));
+						}
+					});
 				});
 				break;
 			default:
