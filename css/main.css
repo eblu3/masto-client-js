@@ -134,5 +134,30 @@ app-modal {
 	height: 100vh;
 
 	position: absolute;
-	z-index: 999;
+	z-index: 2;
+}
+
+app-menu {
+	position: absolute;
+	z-index: 1;
+}
+
+app-status {
+	display: block;
+	
+	margin: 1em auto;
+
+	max-width: var(--max-item-width);
+
+	transition: transform cubic-bezier(0,0,0,1) 0.125s;
+}
+
+#load-more-button {
+	display: block;
+
+	margin: auto;
+
+	width: 100%;
+	max-width: var(--max-item-width);
+	height: 4em;
 }

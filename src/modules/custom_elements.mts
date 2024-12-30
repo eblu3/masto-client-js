@@ -11,6 +11,7 @@ let timelineStylesheet: CSSStyleSheet;
 let navigationStylesheet: CSSStyleSheet;
 let postBoxStylesheet: CSSStyleSheet;
 let modalStylesheet: CSSStyleSheet;
+let menuStylesheet: CSSStyleSheet;
 
 let profileHeaderTemplate: DocumentFragment;
 let cardTemplate: DocumentFragment;
@@ -27,6 +28,12 @@ let tagInputTemplate: DocumentFragment;
 let settingsModalTemplate: DocumentFragment;
 
 let postSentEvent: CustomEvent;
+
+function clickOutsideHandler(event: Event, elementToDetect: HTMLElement) {
+	if(event.target != elementToDetect) {
+		elementToDetect.remove();
+	}
+}
 
 export class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
@@ -104,6 +111,8 @@ export class Card extends HTMLElement {
 }
 
 export class StatusHeader extends HTMLElement {
+	menuButton: HTMLButtonElement;
+	
 	#label: HTMLParagraphElement;
 	#avatar: HTMLImageElement;
 	#displayName: HTMLSpanElement;
@@ -143,6 +152,8 @@ export class StatusHeader extends HTMLElement {
 
 	connectedCallback() {
 		this.appendChild(statusHeaderTemplate.cloneNode(true));
+
+		this.menuButton = this.querySelector("#menu-button") as HTMLButtonElement;
 
 		this.#label = this.querySelector("#label") as HTMLParagraphElement;
 		this.#avatar = this.querySelector("#avatar") as HTMLImageElement;
@@ -336,7 +347,6 @@ export class Status extends Card {
 
 	#link: HTMLAnchorElement;
 	#time: HTMLTimeElement;
-	#postUrl: HTMLAnchorElement;
 
 	constructor(instanceUrl: URL) {
 		super();
@@ -402,7 +412,6 @@ export class Status extends Card {
 			this.content.setContent(renderEmojis(status.content, status.emojis));
 
 			// TODO: separate these into a footer component
-			this.#postUrl.href = new URL(`/@${status.account.acct}/${status.id}`, this.instanceUrl).href;
 			this.#link.href = `/status/?id=${status.id}`;
 			this.#time.dateTime = status.createdAt.toISOString();
 			this.#time.innerText = getRelativeTimeString(status.createdAt);
@@ -445,7 +454,6 @@ export class Status extends Card {
 
 		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
 		this.#time = shadow.getElementById("time") as HTMLTimeElement;
-		this.#postUrl = shadow.getElementById("post-url") as HTMLAnchorElement;
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
@@ -528,7 +536,7 @@ export class Timeline extends HTMLElement {
 	prependStatus(status: mastodon.Status) {
 		const statusElement = new Status(this.instanceUrl);
 		status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
-		this.shadowRoot.prepend(statusElement);
+		this.prepend(statusElement);
 	}
 
 	addStatuses(data: mastodon.Status[]) {
@@ -541,6 +549,43 @@ export class Timeline extends HTMLElement {
 				const statusElement = new Status(this.instanceUrl);
 				status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
 				statuses.appendChild(statusElement);
+				setTimeout(() => {
+					statusElement.header.menuButton.addEventListener("click", (event) => {
+						let localUrl: URL;
+						let remoteUrl: URL;
+						
+						if(status.reblog) {
+							localUrl = new URL(`/@${status.reblog.account.acct}/${status.reblog.id}`, this.instanceUrl);
+							remoteUrl = status.reblog.url;
+						} else {
+							localUrl = new URL(`/@${status.account.acct}/${status.id}`, this.instanceUrl);
+							remoteUrl = status.url;
+						}
+						
+						const menu = new Menu([
+							{name: "log status id", onClick: () => {console.log(status.id)}, icon: "🪪"},
+							{name: "log status content", onClick: () => {console.log(status.content)}, icon: "📄"},
+							{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "🌐"},
+							{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "🌐"}
+						]);
+						const viewTarget = document.getElementById("view-target");
+						if(viewTarget) {
+							menu.style.top = `${statusElement.header.menuButton.offsetTop - viewTarget.scrollTop}px`;
+							menu.style.left = `${statusElement.header.menuButton.offsetLeft - viewTarget.scrollLeft}px`;
+						} else {
+							menu.style.top = `${statusElement.header.menuButton.offsetTop}px`;
+							menu.style.left = `${statusElement.header.menuButton.offsetLeft}px`;
+						}
+						this.appendChild(menu);
+
+						// we put the event listener on a timeout so that it doesn't try to detect a click before the menu opens
+						setTimeout(() => {
+							window.addEventListener("click", (event) => {
+								clickOutsideHandler(event, menu);
+							});
+						}, 50);
+					});
+				}, 250);
 			}
 		}
 
@@ -550,7 +595,7 @@ export class Timeline extends HTMLElement {
 
 		}
 
-		this.shadowRoot.insertBefore(statuses, this.#loadMoreButton);
+		this.insertBefore(statuses, this.#loadMoreButton);
 	}
 
 	loadTimeline(type: string, value?: string) {
@@ -589,16 +634,16 @@ export class Timeline extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, timelineStylesheet];
-		shadow.appendChild(timelineTemplate.cloneNode(true));
+		// const shadow = this.attachShadow({mode: "open"});
+		// shadow.adoptedStyleSheets = [commonStylesheet, timelineStylesheet];
+		this.appendChild(timelineTemplate.cloneNode(true));
 
 		this.#showBoosts = this.getAttribute("boosts") != null ? this.getAttribute("boosts") == "true" : true;
 		this.#showReplies = this.getAttribute("replies") != null ? this.getAttribute("replies") == "true" : true;
 
 		console.log(this.#showBoosts + " " + this.#showReplies);
 
-		this.#loadMoreButton = shadow.getElementById("load-more-button") as HTMLButtonElement;
+		this.#loadMoreButton = this.querySelector("#load-more-button") as HTMLButtonElement;
 		this.#loadMoreButton.addEventListener("click", (event) => {
 			const timelineType = this.getAttribute("type");
 			
@@ -994,6 +1039,48 @@ export class Modal extends HTMLElement {
 	}
 }
 
+export class Menu extends HTMLElement {
+	options: {name: string, onClick: () => void, icon?: string | URL}[];
+	menuRoot: HTMLUListElement;
+	
+	constructor(options: {name: string, onClick: () => void, icon?: string | URL}[]) {
+		super();
+
+		this.options = options;
+	}
+
+	connectedCallback() {
+		const template = `<ul id="root" role="menu"></ul>`;
+		const shadow = this.attachShadow({mode: "open"});
+		shadow.adoptedStyleSheets = [commonStylesheet, menuStylesheet];
+		shadow.innerHTML = template;
+
+		this.menuRoot = shadow.getElementById("root") as HTMLUListElement;
+
+		for(const option of this.options) {
+			const menuItem = document.createElement("li");
+			menuItem.classList.add("menu-item");
+			menuItem.role = "menuitem";
+			menuItem.innerText = option.name;
+			if(option.icon) {
+				let icon: HTMLElement
+				if(typeof option.icon === "string") {
+					icon = document.createElement("span");
+					icon.innerText = option.icon;
+				} else {
+					icon = document.createElement("img");
+					(icon as HTMLImageElement).src = option.icon.href;
+				}
+				icon.classList.add("menu-icon");
+				icon.ariaHidden = "true";
+				menuItem.prepend(icon);
+			}
+			menuItem.addEventListener(("click"), option.onClick);
+			this.menuRoot.appendChild(menuItem);
+		}
+	}
+}
+
 export class HomeView extends HTMLElement {
 	instanceUrl: URL;
 	
@@ -1004,19 +1091,13 @@ export class HomeView extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-
 		const postBox = new PostBox();
 		
 		const homeTimelineObject = new Timeline(this.instanceUrl);
 		homeTimelineObject.setAttribute("type", "home");
 
-		shadow.appendChild(postBox);
-		shadow.appendChild(homeTimelineObject);
-
-		homeTimelineObject.shadowRoot.addEventListener("click", (event) => {
-			console.log((event.target as HTMLElement).nodeName);
-		});
+		this.appendChild(postBox);
+		this.appendChild(homeTimelineObject);
 	}
 }
 
@@ -1030,12 +1111,10 @@ export class PublicTimelineView extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-
 		const publicTimelineObject = new Timeline(this.instanceUrl);
 		publicTimelineObject.setAttribute("type", "public");
 
-		shadow.appendChild(publicTimelineObject);
+		this.appendChild(publicTimelineObject);
 	}
 }
 
@@ -1049,12 +1128,10 @@ export class LocalTimelineView extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-
 		const localTimeline = new Timeline(this.instanceUrl);
 		localTimeline.setAttribute("type", "local");
 
-		shadow.appendChild(localTimeline);
+		this.appendChild(localTimeline);
 	}
 }
 
@@ -1071,13 +1148,11 @@ export class AccountView extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-
 		this.profileHeader = new ProfileHeader();
 		this.accountTimeline = new Timeline(this.instanceUrl);
 		
-		shadow.appendChild(this.profileHeader);
-		shadow.appendChild(this.accountTimeline);
+		this.appendChild(this.profileHeader);
+		this.appendChild(this.accountTimeline);
 	}
 }
 
@@ -1141,6 +1216,7 @@ async function initStylesheets() {
 	navigationStylesheet = await getStylesheet("/css/components/navigation.css");
 	postBoxStylesheet = await getStylesheet("/css/components/post-box.css");
 	modalStylesheet = await getStylesheet("/css/components/modal.css");
+	menuStylesheet = await getStylesheet("/css/components/menu.css");
 }
 
 function initComponents() {
@@ -1165,6 +1241,8 @@ function initComponents() {
 			customElements.define("app-reply-box", ReplyBox);
 
 			customElements.define("app-modal", Modal);
+
+			customElements.define("app-menu", Menu);
 
 			customElements.define("app-view-home", HomeView);
 			customElements.define("app-view-public", PublicTimelineView);
