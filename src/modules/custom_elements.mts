@@ -3,6 +3,8 @@ import {getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, cha
 import { token } from "../env.mjs";
 import * as env from "../env.mjs";
 
+let materialIcons: CSSStyleSheet;
+
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
 let statusStylesheet: CSSStyleSheet;
@@ -38,6 +40,7 @@ interface MenuItem {
 	name: string;
 	onClick: () => void;
 	icon?: string | URL;
+	iconOptions?: {option: string, value: string}[];
 }
 
 function clickOutsideHandler(event: Event, elementToDetect: HTMLElement) {
@@ -199,18 +202,22 @@ export class StatusFooter extends HTMLElement {
 	setBoosted(boosted: boolean) {
 		this.#boosted = boosted;
 		if(boosted) {
-			this.#boostButton.innerText = "Boosted!";
+			this.#boostButton.style.color = "var(--accent-color)";
+			this.#boostButton.style.fontVariationSettings = `'FILL' 100`;
 		} else {
-			this.#boostButton.innerText = "Boost";
+			this.#boostButton.style.color = "";
+			this.#boostButton.style.fontVariationSettings = `'FILL' 0`;
 		}
 	}
 
 	setFaved(faved: boolean) {
 		this.#faved = faved;
 		if(faved) {
-			this.#favoriteButton.innerText = "Favorited!";
+			this.#favoriteButton.style.color = "var(--favorite-color)";
+			this.#favoriteButton.style.fontVariationSettings = `'FILL' 100`;
 		} else {
-			this.#favoriteButton.innerText = "Favorite";
+			this.#favoriteButton.style.color = "";
+			this.#favoriteButton.style.fontVariationSettings = `'FILL' 0`;
 		}
 	}
 
@@ -454,7 +461,7 @@ export class Status extends Card {
 		const header = new StatusHeader;
 		const footer = new StatusFooter;
 
-		shadow.adoptedStyleSheets = [commonStylesheet, statusStylesheet];
+		shadow.adoptedStyleSheets = [materialIcons, commonStylesheet, statusStylesheet];
 
 		shadow.appendChild(statusTemplate.cloneNode(true));
 		shadow.getElementById("status-root").prepend(header);
@@ -584,8 +591,8 @@ export class Timeline extends HTMLElement {
 							{
 								categoryName: "Instance",
 								contents: [
-									{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "🌐"},
-									{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "🌐"}
+									{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language", iconOptions: [{option: "class", value: "material-symbols-outlined"}]},
+									{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language", iconOptions: [{option: "class", value: "material-symbols-outlined"}]}
 								]
 							}
 						]);
@@ -1085,6 +1092,11 @@ export class Menu extends HTMLElement {
 					icon = document.createElement("img");
 					(icon as HTMLImageElement).src = option.icon.href;
 				}
+				if(option.iconOptions) {
+					for(const iconOption of option.iconOptions) {
+						icon.setAttribute(iconOption.option, iconOption.value);
+					}
+				}
 				icon.classList.add("menu-icon");
 				icon.ariaHidden = "true";
 				menuItem.prepend(icon);
@@ -1097,7 +1109,7 @@ export class Menu extends HTMLElement {
 	connectedCallback() {
 		const template = `<ul id="root" role="menu"></ul>`;
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, menuStylesheet];
+		shadow.adoptedStyleSheets = [materialIcons, commonStylesheet, menuStylesheet];
 		shadow.innerHTML = template;
 
 		this.menuRoot = shadow.getElementById("root") as HTMLUListElement;
@@ -1242,6 +1254,8 @@ async function initTemplates() {
 }
 
 async function initStylesheets() {
+	materialIcons = await getStylesheet("/fonts/material-symbols-outlined-class.css");
+
 	commonStylesheet = await getStylesheet("/css/components/common.css");
 	profileHeaderStylesheet = await getStylesheet("/css/components/profile-header.css");
 	statusStylesheet = await getStylesheet("/css/components/status.css");

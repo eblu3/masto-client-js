@@ -18,16 +18,31 @@ article:focus, article:focus-within {
 				inset 0px 0px 0px 2px var(--accent-color);
 }
 
+button {
+	color: var(--foreground-color);
+
+	font-size: larger;
+
+	background: none;
+
+	border: none;
+	border-radius: var(--radius-small);
+
+	cursor: pointer;
+}
+
+button:hover, button:focus {
+	background-color: var(--accent-color-bg-lightest);
+}
+
 address {
 	display: flex;
-
-	margin-bottom: 1em;
 
 	font-style: normal;
 }
 
 #label {
-	margin-top: 0;
+	margin: 0;
 }
 
 #account-info {

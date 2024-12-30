@@ -6,21 +6,24 @@
 </template>
 
 <template id="header">
-	<p id="label" style="display: inline"></p> <button id="menu-button" style="display: inline-block">Menu</button>
-	<address>
-		<img id="avatar" class="avatar" src="/img/default-avatar.png">
-		<div id="account-info">
-			<a id="profile-link" href="#"><span id="display-name" class="display-name">User</span></a>
-			<br>
-			<span id="acct">@user@site.url</span>
-		</div>
-	</address>
+	<p id="label" style="display: inline"></p>
+	<div style="display: flex;">
+		<address style="flex-grow: 1;">
+			<img id="avatar" class="avatar" src="/img/default-avatar.png">
+			<div id="account-info">
+				<a id="profile-link" href="#"><span id="display-name" class="display-name">User</span></a>
+				<br>
+				<span id="acct">@user@site.url</span>
+			</div>
+		</address>
+		<button id="menu-button" class="material-symbols-outlined">more_vert</button>
+	</div>
 </template>
 
 <template id="footer">
-	<button id="reply-button">Reply</button>
-	<button id="boost-button">Boost</button>
-	<button id="favorite-button">Favorite</button>
+	<button id="reply-button" class="material-symbols-outlined">reply</button>
+	<button id="boost-button" class="material-symbols-outlined">repeat</button>
+	<button id="favorite-button" class="material-symbols-outlined">star</button>
 </template>
 
 <template id="content">
