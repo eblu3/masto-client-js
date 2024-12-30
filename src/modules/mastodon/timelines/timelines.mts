@@ -1,5 +1,7 @@
 import {Status} from "../mastodon.mjs";
 
+export * as streaming from "./streaming.mjs";
+
 /**
  * Fetches the public timeline.
  * @param instanceUrl The URL of the instance to retrieve the timeline from.

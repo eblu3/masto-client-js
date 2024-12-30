@@ -4,7 +4,9 @@
 
 	--surface-color: #2e2e41;
 	--surface-color-lighter: #3b3b52;
+	--surface-color-lightest: #535369;
 
+	--accent-color-darker: #573e7a;
 	--accent-color: #ccaaff;
 	--accent-color-lighter: #e2d2fc;
 	--accent-color-bg: #28202F;
@@ -144,7 +146,7 @@ app-menu {
 	z-index: 1;
 }
 
-app-status {
+app-status, app-status-thread {
 	display: block;
 	
 	margin: 1em auto;

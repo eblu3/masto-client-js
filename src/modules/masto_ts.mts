@@ -156,15 +156,15 @@ export function getRelativeTimeString(date: Date): string {
 		case timeElapsed <= -604800:
 			return date.toLocaleString();
 		case timeElapsed <= -86400:
-			return rtf.format(Math.floor(timeElapsed / 86400), "days") + ` (${date.toLocaleString()})`;
+			return rtf.format(Math.floor(timeElapsed / 86400), "days");
 		case timeElapsed <= -3600:
-			return rtf.format(Math.floor(timeElapsed / 3600), "hours") + ` (${date.toLocaleString()})`;
+			return rtf.format(Math.floor(timeElapsed / 3600), "hours");
 		case timeElapsed <= -60:
-			return rtf.format(Math.floor(timeElapsed / 60), "minutes") + ` (${date.toLocaleString()})`;
+			return rtf.format(Math.floor(timeElapsed / 60), "minutes");
 		case timeElapsed <= -1:
-			return rtf.format(Math.floor(timeElapsed), "seconds") + ` (${date.toLocaleString()})`;
+			return rtf.format(Math.floor(timeElapsed), "seconds");
 		case timeElapsed > -1:
-			return `now (${date.toLocaleString()})`;
+			return "now";
 		default:
 			return date.toLocaleString();
 	}

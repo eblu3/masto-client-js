@@ -19,20 +19,26 @@ article:focus, article:focus-within {
 }
 
 button {
+	padding: 0.25em;
+
+	border: none;
+	border-radius: var(--radius-small);
+
 	color: var(--foreground-color);
 
 	font-size: larger;
 
 	background: none;
 
-	border: none;
-	border-radius: var(--radius-small);
-
 	cursor: pointer;
 }
 
 button:hover, button:focus {
-	background-color: var(--accent-color-bg-lightest);
+	background-color: var(--accent-color-darker);
+}
+
+header {
+	margin-bottom: 1.5em;
 }
 
 address {
@@ -43,6 +49,10 @@ address {
 
 #label {
 	margin: 0;
+}
+
+#label .material-symbols-outlined {
+	vertical-align: middle;
 }
 
 #account-info {
@@ -120,6 +130,14 @@ code {
 	border-radius: var(--radius-small);
 }
 
+blockquote {
+	margin: 0;
+	padding: 1em;
+
+	border: 1px solid var(--surface-color-lightest);
+	border-radius: var(--radius-small);
+}
+
 #post-content {
 	margin: 1em 0;
 }
@@ -137,4 +155,15 @@ code {
 #post-attachments > * {
 	width: 100%;
 	height: 100%;
+}
+
+footer {
+	margin-top: 1em;
+	padding-top: 0.5em;
+
+	border-top: 1px solid var(--surface-color-lighter);
+}
+
+article:focus footer, article:focus-within footer {
+	border-color: var(--surface-color-lightest);
 }

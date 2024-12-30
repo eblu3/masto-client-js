@@ -194,6 +194,8 @@ mastodon.accounts.preferences.getUserPreferences(instanceUrl, token).then((prefs
 })
 
 initView();
+
+
 // mastodon.createApplication(instanceUrl, "thingy 3: god I hope this works", new URL("/auth", location.origin).href, "read", new URL("https://example.com")).then((app) => {
 // 	localStorage.setItem("appInfo", JSON.stringify(app));
 // 	appInfo = app;

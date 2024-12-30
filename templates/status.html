@@ -1,7 +1,6 @@
 <template id="status">
 	<article id="status-root">
 		<main id="status-content-target"></main>
-		<p><a id="link" href="#"><time id="time">post time</time></a></p>
 	</article>
 </template>
 
@@ -13,7 +12,7 @@
 			<div id="account-info">
 				<a id="profile-link" href="#"><span id="display-name" class="display-name">User</span></a>
 				<br>
-				<span id="acct">@user@site.url</span>
+				<span id="acct">@user@site.url</span> • <time id="time">sometime</time>
 			</div>
 		</address>
 		<button id="menu-button" class="material-symbols-outlined">more_vert</button>
@@ -21,9 +20,7 @@
 </template>
 
 <template id="footer">
-	<button id="reply-button" class="material-symbols-outlined">reply</button>
-	<button id="boost-button" class="material-symbols-outlined">repeat</button>
-	<button id="favorite-button" class="material-symbols-outlined">star</button>
+	<button id="reply-button" class="material-symbols-outlined">reply</button><button id="boost-button" class="material-symbols-outlined">repeat</button><button id="favorite-button" class="material-symbols-outlined">star</button>
 </template>
 
 <template id="content">

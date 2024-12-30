@@ -132,6 +132,7 @@ export class StatusHeader extends HTMLElement {
 	#displayName: HTMLSpanElement;
 	#handle: HTMLSpanElement;
 	#profileLink: HTMLAnchorElement;
+	#postTime: HTMLTimeElement;
 
 	constructor() {
 		super();
@@ -157,6 +158,11 @@ export class StatusHeader extends HTMLElement {
 		this.#profileLink.href = url.href;
 	}
 
+	setTime(time: Date) {
+		this.#postTime.dateTime = time.toISOString();
+		this.#postTime.innerText = getRelativeTimeString(time);
+	}
+
 	setProfileInfo(avatarUrl: URL, displayName: string, handle: string, profileLink: URL) {
 		this.setAvatar(avatarUrl);
 		this.setDisplayName(displayName);
@@ -174,6 +180,7 @@ export class StatusHeader extends HTMLElement {
 		this.#displayName = this.querySelector("#display-name");
 		this.#handle = this.querySelector("#acct");
 		this.#profileLink = this.querySelector("#profile-link") as HTMLAnchorElement;
+		this.#postTime = this.querySelector("#time") as HTMLTimeElement;
 	}
 }
 
@@ -359,101 +366,86 @@ export class Status extends Card {
 
 	instanceUrl: URL;
 
+	status: mastodon.Status;
+	isReblog: boolean;
+
 	header: StatusHeader;
 	footer: StatusFooter;
 	content: StatusContent;
 
-	#link: HTMLAnchorElement;
-	#time: HTMLTimeElement;
-
-	constructor(instanceUrl: URL) {
+	constructor(instanceUrl: URL, status: mastodon.Status) {
 		super();
 
 		this.instanceUrl = instanceUrl;
+		this.status = status;
+		status.reblog ? this.isReblog = true : this.isReblog = false;
 	}
 
-	setStatus(status: mastodon.Status, reblog?: boolean, reblogger?: mastodon.Account) {
-		if(!(this.header && this.footer)) {
-			setTimeout(() => {this.setStatus(status, reblog, reblogger)}, 100);
-		} else {
-			const localProfileUrl = new URL("./user/", window.location.origin);
-			localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
+	setStatus(status: mastodon.Status) {
+		const localProfileUrl = new URL("./user/", window.location.origin);
+		localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
 
-			if(reblog) {
-				this.header.setLabel(`<a href="/user/?acct=@${reblogger.acct}">🔁 <img class="avatar inline-img" src="${reblogger.avatar}" alt=""> <span class="display-name">${(reblogger.displayName || reblogger.displayName != "") ? renderEmojis(reblogger.displayName, reblogger.emojis) : reblogger.username}</span> boosted</a>`);
-			} else if(status.inReplyToId) {
-				this.header.setLabel("💬 reply");
-			}
+		if(this.isReblog) {
+			this.header.setLabel(`<a href="/user/?acct=@${this.status.account.acct}"><span class="material-symbols-outlined">repeat</span> <img class="avatar inline-img" src="${this.status.account.avatar}" alt=""> <span class="display-name">${(this.status.account.displayName || this.status.account.displayName != "") ? renderEmojis(this.status.account.displayName, this.status.account.emojis) : this.status.account.username}</span> boosted</a>`);
+		} else if(this.status.inReplyToId) {
+			// mastodon.accounts.getAccount(this.instanceUrl, status.inReplyToAccountId, env.token).then((repliedToAccount) => {
+			// 	this.header.setLabel(`<span class="material-symbols-outlined">reply</span> in reply to <img class="avatar inline-img" src="${repliedToAccount.avatar}" alt=""> <span class="display-name">${(repliedToAccount.displayName || repliedToAccount.displayName != "") ? renderEmojis(repliedToAccount.displayName, repliedToAccount.emojis) : repliedToAccount.username}</span>`);
+			// });
+		}
 
-			let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) as string : status.account.username;
+		let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) as string : status.account.username;
 
-			this.header.setProfileInfo(
-				status.account.avatar,
-				outDisplayName,
-				parseHandle(`@${status.account.acct}`),
-				localProfileUrl
-			);
+		this.header.setProfileInfo(
+			status.account.avatar,
+			outDisplayName,
+			parseHandle(`@${status.account.acct}`),
+			localProfileUrl
+		);
+		this.header.setTime(status.createdAt);
 
-			this.footer.setStatusInfo(status.id, undefined, status.reblogged, status.favourited);
-			this.footer.connectReplyButton(this);
-			
-			if(status.language) {
-				this.setAttribute("lang", status.language.language);
-			} else if(this.hasAttribute("lang")) {
-				this.removeAttribute("lang");
-			}
+		this.footer.setStatusInfo(status.id, undefined, status.reblogged, status.favourited);
+		this.footer.connectReplyButton(this);
+		
+		if(status.language) {
+			this.setAttribute("lang", status.language.language);
+		} else if(this.hasAttribute("lang")) {
+			this.removeAttribute("lang");
+		}
 
-			if(status.sensitive || status.spoilerText != "") {
-				if(!(this.content instanceof StatusContentWarned)) {
-					if(this.content) {
-						this.content.remove();
-					}
-
-					this.content = new StatusContentWarned;
-					this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
-				}
-
-				if(status.spoilerText != "") {
-					(this.content as StatusContentWarned).setContentWarning(`⚠️ ${status.spoilerText}`);
-				}
-			} else {
-				if(this.content && this.content instanceof StatusContentWarned) {
+		if(status.sensitive || status.spoilerText != "") {
+			if(!(this.content instanceof StatusContentWarned)) {
+				if(this.content) {
 					this.content.remove();
 				}
 
-				this.content = new StatusContent;
-				this.content.slot = "content";
+				this.content = new StatusContentWarned;
 				this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 			}
 
-			console.log(status);
-			this.content.setContent(renderEmojis(status.content, status.emojis));
-
-			// TODO: separate these into a footer component
-			this.#link.href = `/status/?id=${status.id}`;
-			this.#time.dateTime = status.createdAt.toISOString();
-			this.#time.innerText = getRelativeTimeString(status.createdAt);
-
-			if(status.mediaAttachments.length > 0) {
-				this.content.setAttachments(renderAttachments(status.mediaAttachments));
+			if(status.spoilerText != "") {
+				(this.content as StatusContentWarned).setContentWarning(`⚠️ ${status.spoilerText}`);
+			}
+		} else {
+			if(this.content && this.content instanceof StatusContentWarned) {
+				this.content.remove();
 			}
 
-			if(status.card != null) {
-				this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
-			} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
-				this.content.removeCard();
-			}
+			this.content = new StatusContent;
+			this.content.slot = "content";
+			this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 		}
-	}
 
-	setStatusById(statusId: string) {
-		mastodon.statuses.getStatus(env.instanceUrl, statusId, env.token).then((status) => {
-			if(status.reblog) {
-				this.setStatus(status.reblog, true, status.account);
-			} else {
-				this.setStatus(status);
-			}
-		});
+		this.content.setContent(renderEmojis(status.content, status.emojis));
+
+		if(status.mediaAttachments.length > 0) {
+			this.content.setAttachments(renderAttachments(status.mediaAttachments));
+		}
+
+		if(status.card != null) {
+			this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
+		} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
+			this.content.removeCard();
+		}
 	}
 
 	connectedCallback() {
@@ -470,14 +462,37 @@ export class Status extends Card {
 		this.header = header;
 		this.footer = footer;
 
-		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
-		this.#time = shadow.getElementById("time") as HTMLTimeElement;
+		if(this.isReblog) {
+			this.setStatus(this.status.reblog);
+		} else {
+			this.setStatus(this.status);
+		}
+	}
+}
+
+export class StatusThread extends Status {
+	rootStatus: mastodon.Status;
+	
+	constructor(instanceUrl: URL, status: mastodon.Status) {
+		super(instanceUrl, status);
+	}
+	
+	setStatus(status: mastodon.Status) {
+		this.rootStatus = this.status;
+
+		super.setStatus(status);
+
+		mastodon.statuses.getStatusContext(this.instanceUrl, this.rootStatus.id, env.token).then((context) => {
+			const firstStatus = new Status(this.instanceUrl, context.ancestors[0]);
+			this.shadowRoot.prepend(firstStatus);
+			if(context.ancestors.length > 1) {
+				this.shadowRoot.insertBefore(new Text(`+${context.ancestors.length - 1} more`), this.shadowRoot.getElementById("status-root"));
+			}
+		});
 	}
 
-	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-		if(name == "statusid") {
-			this.setStatusById(newValue);
-		}
+	connectedCallback() {
+		super.connectedCallback();
 	}
 }
 
@@ -552,8 +567,7 @@ export class Timeline extends HTMLElement {
 	}
 
 	prependStatus(status: mastodon.Status) {
-		const statusElement = new Status(this.instanceUrl);
-		status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
+		const statusElement = new Status(this.instanceUrl, status);
 		this.prepend(statusElement);
 	}
 
@@ -564,8 +578,10 @@ export class Timeline extends HTMLElement {
 			if((!this.#showReplies && status.inReplyToId) || (!this.#showBoosts && status.reblog)) {
 				continue;
 			} else {
-				const statusElement = new Status(this.instanceUrl);
-				status.reblog ? statusElement.setStatus(status.reblog, true, status.account) : statusElement.setStatus(status);
+				let statusElement: Status;
+
+				status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status) : statusElement = new Status(this.instanceUrl, status);
+
 				statuses.appendChild(statusElement);
 				setTimeout(() => {
 					statusElement.header.menuButton.addEventListener("click", (event) => {
@@ -584,15 +600,15 @@ export class Timeline extends HTMLElement {
 							{
 								categoryName: "Debug",
 								contents: [
-									{name: "Log status ID", onClick: () => {console.log(status.id)}, icon: "🪪"},
-									{name: "Log status content", onClick: () => {console.log(status.content)}, icon: "📄"}
+									{name: "Log status ID", onClick: () => {console.log(status.id)}, icon: "id_card"},
+									{name: "Log status content", onClick: () => {console.log(status.content)}, icon: "description"}
 								]
 							},
 							{
 								categoryName: "Instance",
 								contents: [
-									{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language", iconOptions: [{option: "class", value: "material-symbols-outlined"}]},
-									{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language", iconOptions: [{option: "class", value: "material-symbols-outlined"}]}
+									{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language"},
+									{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language"}
 								]
 							}
 						]);
@@ -642,6 +658,15 @@ export class Timeline extends HTMLElement {
 			case "public":
 				mastodon.timelines.getPublicTimeline(this.instanceUrl, token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
+					mastodon.timelines.streaming.establishWebSocketConnection(this.instanceUrl, env.token, mastodon.timelines.streaming.Streams.Public, undefined, undefined, true).addEventListener("message", (message) => {
+						const data = JSON.parse(message.data);
+						const event = data["event"] as string;
+						const payload = JSON.parse(data.payload);
+
+						if(event == mastodon.timelines.streaming.Events.NewStatus) {
+							this.prependStatus(new mastodon.Status(payload));
+						}
+					});
 				});
 				break;
 			case "local":
@@ -1032,8 +1057,7 @@ export class ReplyBox extends PostBox {
 		}
 
 		mastodon.statuses.postStatus(this.instanceUrl, env.token, undefined, postText, undefined, undefined, this.#replyId).then((status) => {
-			const newStatus = new Status(this.instanceUrl);
-			newStatus.setStatus(status as mastodon.Status);
+			const newStatus = new Status(this.instanceUrl, status as mastodon.Status);
 			this.parentNode.insertBefore(newStatus, this.nextElementSibling);
 			this.remove();
 		})
@@ -1088,6 +1112,7 @@ export class Menu extends HTMLElement {
 				if(typeof option.icon === "string") {
 					icon = document.createElement("span");
 					icon.innerText = option.icon;
+					icon.classList.add("material-symbols-outlined");
 				} else {
 					icon = document.createElement("img");
 					(icon as HTMLImageElement).src = option.icon.href;
@@ -1103,6 +1128,9 @@ export class Menu extends HTMLElement {
 			}
 			menuItem.addEventListener(("click"), option.onClick);
 			target.appendChild(menuItem);
+			menuItem.addEventListener("click", (event) => {
+				this.remove();
+			});
 		}
 	}
 	
@@ -1278,6 +1306,7 @@ function initComponents() {
 			customElements.define("app-status-content", StatusContent);
 			customElements.define("app-status-content-warned", StatusContentWarned);
 			customElements.define("app-status", Status);
+			customElements.define("app-status-thread", StatusThread);
 			customElements.define("app-link-card", LinkCard);
 
 			customElements.define("app-timeline", Timeline);
