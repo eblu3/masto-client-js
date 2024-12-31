@@ -1,4 +1,5 @@
 import * as mastodon from "./mastodon/mastodon.mjs";
+import * as oEmbed from "./oembed/oembed.mjs";
 import {getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, charLimit} from "./masto_ts.mjs";
 import { token } from "../env.mjs";
 import * as env from "../env.mjs";
@@ -9,7 +10,6 @@ let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
 let statusStylesheet: CSSStyleSheet;
 let linkCardStylesheet: CSSStyleSheet;
-let timelineStylesheet: CSSStyleSheet;
 let navigationStylesheet: CSSStyleSheet;
 let postBoxStylesheet: CSSStyleSheet;
 let modalStylesheet: CSSStyleSheet;
@@ -312,15 +312,12 @@ export class StatusContent extends HTMLElement {
 	addCard(linkUrl?: URL, title?: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
 		if(this.#card) {
 			console.warn("card already exists");
-		} else {
+		} else if(linkUrl && title && (imageUrl || description)) {
 			const card = new LinkCard;
-			card.slot = "card";
-			this.appendChild(card);
+			this.querySelector("#post-content").appendChild(card);
 			this.#card = card;
 			
-			if(linkUrl && title) {
-				card.setAll(linkUrl, title, imageUrl, description, imageWidth, imageHeight);
-			}
+			card.setAll(linkUrl, title, imageUrl, description, imageWidth, imageHeight);
 		}
 	}
 
@@ -442,7 +439,23 @@ export class Status extends Card {
 		}
 
 		if(status.card != null) {
-			this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
+			oEmbed.getoEmbed(status.card.url).then((response) => {
+					if(response) {
+						if(response instanceof oEmbed.VideoResponse || response instanceof oEmbed.RichResponse) {
+							if(response.html.body.getElementsByTagName("iframe").length > 0) {
+								response.html.body.childNodes.forEach((node) => {
+									this.content.appendChild(node);
+								});
+							} else {
+								const iframe = document.createElement("iframe");
+								this.content.appendChild(iframe);
+								iframe.srcdoc = response.html.body.innerHTML;
+							}
+						}
+					} else {
+						this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
+					}
+				});
 		} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
 			this.content.removeCard();
 		}
@@ -1299,7 +1312,6 @@ async function initStylesheets() {
 	profileHeaderStylesheet = await getStylesheet("/css/components/profile-header.css");
 	statusStylesheet = await getStylesheet("/css/components/status.css");
 	linkCardStylesheet = await getStylesheet("/css/components/link-card.css");
-	timelineStylesheet = await getStylesheet("/css/components/timeline.css");
 	navigationStylesheet = await getStylesheet("/css/components/navigation.css");
 	postBoxStylesheet = await getStylesheet("/css/components/post-box.css");
 	modalStylesheet = await getStylesheet("/css/components/modal.css");

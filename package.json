@@ -1,11 +1,15 @@
 {
   "devDependencies": {
     "blurhash": "^2.0.5",
-    "esbuild": "0.24.0",
+    "esbuild": "^0.24.0",
     "tslib": "^2.8.1",
     "typescript": "^5.7.2"
   },
   "scripts": {
     "build": "esbuild src/test.mts --bundle --outfile=test/js/out.mjs"
+  },
+  "dependencies": {
+    "oembed-providers": "^1.0.20241022",
+    "wildcard-match": "^5.1.4"
   }
 }

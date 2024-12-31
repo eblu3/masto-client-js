@@ -24,20 +24,16 @@
 </template>
 
 <template id="content">
-	<div slot="content">
-		<div id="post-content"></div>
-		<slot name="card"></slot>
-	</div>
+	<div id="post-content"></div>
+	<slot name="card"></slot>
 	<div id="post-attachments"></div>
 </template>
 
 <template id="content-cw">
 	<details slot="content">
 		<summary id="cw" class="content-warning">⚠️ Sensitive content</summary>
-		<div>
-			<div id="post-content"></div>
-			<slot name="card"></slot>
-		</div>
+		<div id="post-content"></div>
+		<slot name="card"></slot>
 		<div id="post-attachments"></div>
 	</details>
 </template>
