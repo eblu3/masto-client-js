@@ -161,19 +161,20 @@ export async function getoEmbed(url: URL): Promise<PhotoResponse | VideoResponse
 				return new Response(response);
 		}
 	} else {
-		console.log("no provider, attempting to get oembed link from html");
-		const firstFetch = await fetch(url);
+		try {
+			console.log("no provider, attempting to get oembed link from html");
+			const firstFetch = await fetch(url);
 
-		let oEmbedUrl: URL;
+			let oEmbedUrl: URL;
 
-		const ffLinks = new DOMParser().parseFromString(await firstFetch.text(), "text/html").getElementsByTagName("link");
-		for(let i = 0; i < ffLinks.length; i++) {
-			if(ffLinks.item(i).type = "application/json+oembed") {
-				oEmbedUrl = new URL(ffLinks.item(i).href);
+			const ffLinks = new DOMParser().parseFromString(await firstFetch.text(), "text/html").getElementsByTagName("link");
+			for(let i = 0; i < ffLinks.length; i++) {
+				if(ffLinks.item(i).type = "application/json+oembed") {
+					oEmbedUrl = new URL(ffLinks.item(i).href);
+				}
 			}
-		}
 
-		const response = await (await fetch(oEmbedUrl)).json();
+			const response = await (await fetch(oEmbedUrl)).json();
 
 			switch(response.type) {
 				case ResourceType.Photo:
@@ -187,6 +188,9 @@ export async function getoEmbed(url: URL): Promise<PhotoResponse | VideoResponse
 				default:
 					return new Response(response);
 			}
+		} catch {
+			return null;
+		}
 	}
 }
 

@@ -19,7 +19,7 @@ tr.verified::after {
 }
 
 .custom-emoji, .inline-img {
-	max-height: 1.25em;
+	max-height: 1.33em;
 	vertical-align: middle;
 }
 

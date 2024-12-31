@@ -441,6 +441,7 @@ export class Status extends Card {
 		if(status.card != null) {
 			oEmbed.getoEmbed(status.card.url).then((response) => {
 					if(response) {
+						console.log(response);
 						if(response instanceof oEmbed.VideoResponse || response instanceof oEmbed.RichResponse) {
 							if(response.html.body.getElementsByTagName("iframe").length > 0) {
 								response.html.body.childNodes.forEach((node) => {
@@ -448,8 +449,9 @@ export class Status extends Card {
 								});
 							} else {
 								const iframe = document.createElement("iframe");
-								this.content.appendChild(iframe);
+								iframe.width = String(response.width);
 								iframe.srcdoc = response.html.body.innerHTML;
+								this.content.appendChild(iframe);
 							}
 						}
 					} else {
