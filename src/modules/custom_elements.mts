@@ -362,8 +362,6 @@ export class StatusContentWarned extends StatusContent {
 }
 
 export class Status extends Card {
-	static observedAttributes = ["statusid", "sensitive", "spoilertext"];
-
 	instanceUrl: URL;
 
 	status: mastodon.Status;
@@ -384,6 +382,8 @@ export class Status extends Card {
 	setStatus(status: mastodon.Status) {
 		const localProfileUrl = new URL("./user/", window.location.origin);
 		localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
+
+		this.id = status.id;
 
 		if(this.isReblog) {
 			this.header.setLabel(`<a href="/user/?acct=@${this.status.account.acct}"><span class="material-symbols-outlined">repeat</span> <img class="avatar inline-img" src="${this.status.account.avatar}" alt=""> <span class="display-name">${(this.status.account.displayName || this.status.account.displayName != "") ? renderEmojis(this.status.account.displayName, this.status.account.emojis) : this.status.account.username}</span> boosted</a>`);
@@ -531,10 +531,12 @@ export class StatusThread extends Status {
 		super.setStatus(status);
 
 		mastodon.statuses.getStatusContext(this.instanceUrl, this.rootStatus.id, env.token).then((context) => {
-			const firstStatus = new Status(this.instanceUrl, context.ancestors[0]);
-			this.shadowRoot.prepend(firstStatus);
-			if(context.ancestors.length > 1) {
-				this.shadowRoot.insertBefore(new Text(`+${context.ancestors.length - 1} more`), this.shadowRoot.getElementById("status-root"));
+			if(context.ancestors.length > 0) {
+				const firstStatus = new StatusThread(this.instanceUrl, context.ancestors[0]);
+				this.shadowRoot.prepend(firstStatus);
+				if(context.ancestors.length > 1) {
+					this.shadowRoot.insertBefore(new Text(`+${context.ancestors.length - 1} more`), this.shadowRoot.getElementById("status-root"));
+				}
 			}
 		});
 	}
@@ -615,7 +617,8 @@ export class Timeline extends HTMLElement {
 	}
 
 	prependStatus(status: mastodon.Status) {
-		const statusElement = new Status(this.instanceUrl, status);
+		let statusElement: Status;
+		status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status) : statusElement = new Status(this.instanceUrl, status);
 		this.prepend(statusElement);
 	}
 
@@ -627,9 +630,7 @@ export class Timeline extends HTMLElement {
 				continue;
 			} else {
 				let statusElement: Status;
-
 				status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status) : statusElement = new Status(this.instanceUrl, status);
-
 				statuses.appendChild(statusElement);
 			}
 		}
