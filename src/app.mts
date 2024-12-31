@@ -196,22 +196,6 @@ mastodon.accounts.preferences.getUserPreferences(instanceUrl, token).then((prefs
 
 initView();
 
-setTimeout(() => {
-	oEmbed.getoEmbed(new URL("https://www.tumblr.com/beanysprout/771351944916762624/total-obliteration")).then((response) => {
-		if(response instanceof oEmbed.VideoResponse || response instanceof oEmbed.RichResponse) {
-			if(response.html.body.getElementsByTagName("iframe").length > 0) {
-				response.html.body.childNodes.forEach((node) => {
-					currentView.prepend(node);
-				});
-			} else {
-				const iframe = document.createElement("iframe");
-				currentView.prepend(iframe);
-				iframe.srcdoc = response.html.body.innerHTML;
-			}
-		}
-	});
-}, 1500);
-
 // mastodon.createApplication(instanceUrl, "thingy 3: god I hope this works", new URL("/auth", location.origin).href, "read", new URL("https://example.com")).then((app) => {
 // 	localStorage.setItem("appInfo", JSON.stringify(app));
 // 	appInfo = app;
