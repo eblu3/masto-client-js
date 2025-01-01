@@ -1,4 +1,4 @@
-import {Account, CredentialAccount, FamiliarFollowers, FeaturedTag, List, Relationship, Status, Token} from "../mastodon.mjs";
+import {Account, CredentialAccount, FamiliarFollowers, FeaturedTag, fetchFromInstance, List, Relationship, Status, Token} from "../mastodon.mjs";
 
 export * as bookmarks from "./bookmarks.mjs";
 export * as favourites from "./favourites.mjs";
@@ -40,14 +40,13 @@ export async function registerAccount(
 		delete requestBody.reason;
 	}
 
-	const response = await fetch(new URL("/api/v1/accounts", instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`,
-			"Content-Type": "application/json"
-		},
-		body: JSON.stringify(requestBody)
-	});
+	const response = await fetchFromInstance(
+		new URL("/api/v1/accounts", instanceUrl),
+		token,
+		undefined,
+		"POST",
+		requestBody
+	);
 
 	if(response.ok) {
 		return new Token(await response.json());

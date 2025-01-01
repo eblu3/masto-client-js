@@ -1,5 +1,8 @@
 import {Status} from "../mastodon.mjs";
 
+export * as conversations from "./conversations.mjs";
+export * as lists from "./lists.mjs";
+export * as markers from "./markers.mjs";
 export * as streaming from "./streaming.mjs";
 
 /**

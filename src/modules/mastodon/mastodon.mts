@@ -334,6 +334,27 @@ export class Context {
 	}
 }
 
+export class Conversation {
+	id: string;
+	unread: boolean;
+	accounts: Account[];
+	lastStatus: Status | null;
+
+	constructor(data: any) {
+		this.id = data["id"];
+		this.unread = data["unread"];
+		this.accounts = [];
+		for(const account of data["accounts"]) {
+			this.accounts.push(new Account(account));
+		}
+		try {
+			this.lastStatus = new Status(data["last_status"]);
+		} catch {
+			this.lastStatus = null;
+		}
+	}
+}
+
 /**
  * Represents a custom emoji.
  */
@@ -559,6 +580,18 @@ export class List {
 		this.id = data["id"];
 		this.title = data["title"];
 		this.repliesPolicy = data["replies_policy"];
+	}
+}
+
+export class Marker {
+	lastReadId: string;
+	version: number;
+	updatedAt: Date;
+
+	constructor(data: any) {
+		this.lastReadId = data["last_read_id"];
+		this.version = data["version"];
+		this.updatedAt = new Date(data["updated_at"]);
 	}
 }
 
@@ -1282,4 +1315,35 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 		console.error(error.message);
 		return null;
 	}
+}
+
+export async function fetchFromInstance(
+	endpoint: URL,
+	token?: string,
+	searchParams?: {key: string, value: string}[],
+	method?: string,
+	body?: any
+): Promise<Response> {
+	const requestInit: RequestInit = {};
+
+	if(method) {
+		requestInit.method = method;
+	}
+
+	if(token) {
+		(requestInit.headers as any)["Authorization"] = `Bearer ${token}`;
+	}
+
+	if(body) {
+		(requestInit.headers as any)["Content-Type"] = "application/json";
+		requestInit.body = JSON.stringify(body);
+	}
+
+	if(searchParams) {
+		for(const pair of searchParams) {
+			endpoint.searchParams.append(pair.key, pair.value);
+		}
+	}
+
+	return fetch(endpoint, requestInit);
 }
