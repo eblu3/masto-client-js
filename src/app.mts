@@ -88,7 +88,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 					(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", id);
 				});
 			} else {
-				mastodon.accounts.getAccount(instanceUrl, data.id, token).then((account) => {
+				mastodon.accounts.get(instanceUrl, data.id, token).then((account) => {
 					(currentView as customElements.AccountView).profileHeader.setAccount(account);
 				});
 				(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", data.id);

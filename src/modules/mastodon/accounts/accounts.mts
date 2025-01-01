@@ -15,7 +15,7 @@ export * as followedTags from "./followedTags.mjs";
 export * as suggestions from "./suggestions.mjs";
 export * as tags from "./tags.mjs";
 
-export async function registerAccount(
+export async function register(
 	instanceUrl: URL,
 	token: string,
 	username: string,
@@ -62,11 +62,7 @@ export async function registerAccount(
 }
 
 export async function verifyCredentials(instanceUrl: URL, token: string): Promise<CredentialAccount> {
-	const response = await fetch(new URL("/api/v1/accounts/verify_credentials", instanceUrl), {
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(new URL("/api/v1/accounts/verify_credentials", instanceUrl), token);
 
 	if(response.ok) {
 		return new CredentialAccount(await response.json());
@@ -149,13 +145,13 @@ export async function updateCredentials(
 		console.warn(`Language ${language} does not seem like a valid country code. Not setting default post language.`);
 	}
 
-	const response = await fetch(new URL("/api/v1/accounts/update_credentials", instanceUrl), {
-		method: "PATCH",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		},
-		body: formData
-	});
+	const response = await fetchFromInstance(
+		new URL("/api/v1/accounts/update_credentials", instanceUrl),
+		token,
+		undefined,
+		"PATCH",
+		formData
+	);
 
 	if(response.ok) {
 		return new CredentialAccount(await response.json());
@@ -169,18 +165,8 @@ export async function updateCredentials(
 	}
 }
 
-export async function getAccount(instanceUrl: URL, id: string, token?: string): Promise<Account> {
-	let response; 
-	
-	if(token) {
-		response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl), {
-			headers: {
-				"Authorization": `Bearer ${token}`
-			}
-		});
-	} else {
-		response = await fetch(new URL(`/api/v1/accounts/${id}`, instanceUrl));
-	}
+export async function get(instanceUrl: URL, id: string, token?: string): Promise<Account> {
+	const response = await fetchFromInstance(new URL(`/api/v1/accounts/${id}`, instanceUrl), token);
 
 	if(response.ok) {
 		return new Account(await response.json());
@@ -194,23 +180,18 @@ export async function getAccount(instanceUrl: URL, id: string, token?: string): 
 	}
 }
 
-export async function getAccounts(instanceUrl: URL, ids: string[], token?: string): Promise<Account[]> {
-	let endpoint = new URL("/api/v1/accounts", instanceUrl);
-	let response: Response;
+export async function getMultiple(instanceUrl: URL, ids: string[], token?: string): Promise<Account[]> {
+	const params = new URLSearchParams();
 
 	for(const id of ids) {
-		endpoint.searchParams.append("id[]", id);
+		params.append("id[]", id);
 	}
 
-	if(token) {
-		response = await fetch(endpoint, {
-			headers: {
-				"Authorization": `Bearer ${token}`
-			}
-		});
-	} else {
-		response = await fetch(endpoint);
-	}
+	const response = await fetchFromInstance(
+		new URL("/api/v1/accounts", instanceUrl),
+		token,
+		params
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -231,7 +212,7 @@ export async function getAccounts(instanceUrl: URL, ids: string[], token?: strin
 	}
 }
 
-export async function getAccountStatuses(
+export async function getStatuses(
 	instanceUrl: URL,
 	id: string,
 	token?: string,
@@ -244,47 +225,42 @@ export async function getAccountStatuses(
 	pinned?: boolean,
 	tagged?: string
 ): Promise<Status[]> {
-	const endpoint = new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl);
-	let response: Response;
+	const params = new URLSearchParams();
 
 	if(maxId) {
-		endpoint.searchParams.set("max_id", maxId);
+		params.set("max_id", maxId);
 	}
 	if(minId) {
-		endpoint.searchParams.set("min_id", minId);
+		params.set("min_id", minId);
 	}
 	if(limit) {
 		if(limit > 0 && limit <= 40) {
-			endpoint.searchParams.set("limit", String(limit));
+			params.set("limit", String(limit));
 		} else {
 			console.warn(`You requested ${limit} statuses. Mastodon only supports fetching between 1 and 40 statuses in a single request. Defaulting to 20.`);
 		}
 	}
 	if(onlyMedia != undefined) {
-		endpoint.searchParams.set("only_media", String(onlyMedia));
+		params.set("only_media", String(onlyMedia));
 	}
 	if(excludeReplies != undefined) {
-		endpoint.searchParams.set("exclude_replies", String(excludeReplies));
+		params.set("exclude_replies", String(excludeReplies));
 	}
 	if(excludeReblogs != undefined) {
-		endpoint.searchParams.set("exclude_reblogs", String(excludeReblogs));
+		params.set("exclude_reblogs", String(excludeReblogs));
 	}
 	if(pinned != undefined) {
-		endpoint.searchParams.set("pinned", String(pinned));
+		params.set("pinned", String(pinned));
 	}
 	if(tagged) {
-		endpoint.searchParams.set("tagged", tagged);
+		params.set("tagged", tagged);
 	}
 
-	if(token) {
-		response = await fetch(endpoint, {
-			headers: {
-				"Authorization": `Bearer ${token}`
-			}
-		});
-	} else {
-		response = await fetch(endpoint);
-	}
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/statuses`, instanceUrl),
+		token,
+		params
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -306,32 +282,27 @@ export async function getAccountStatuses(
 }
 
 // TODO: add support for link header once I figure out how that works
-export async function getAccountFollowers(
+export async function getFollowers(
 	instanceUrl: URL,
 	id: string,
 	token?: string,
 	limit?: number
 ): Promise<Account[]> {
-	const endpoint = new URL(`/api/v1/accounts/${id}/followers`, instanceUrl);
-	let response: Response;
+	const params = new URLSearchParams();
 
 	if(limit) {
 		if(limit > 0 && limit <= 80) {
-			endpoint.searchParams.set("limit", String(limit));
+			params.set("limit", String(limit));
 		} else {
 			console.warn(`You specified ${limit} accounts but Mastodon only supports returning between 1 and 80 accounts from this endpoint. Defaulting to 40.`);
 		}
 	}
 
-	if(token) {
-		response = await fetch(endpoint, {
-			headers: {
-				"Authorization": `Bearer ${token}`
-			}
-		});
-	} else {
-		response = await fetch(endpoint);
-	}
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/followers`, instanceUrl),
+		token,
+		params
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -353,32 +324,27 @@ export async function getAccountFollowers(
 }
 
 // TODO: same as above
-export async function getAccountFollowing(
+export async function getFollowing(
 	instanceUrl: URL,
 	id: string,
 	token?: string,
 	limit?: number
 ): Promise<Account[]> {
-	const endpoint = new URL(`/api/v1/accounts/${id}/following`, instanceUrl);
-	let response: Response;
+	const params = new URLSearchParams();
 
 	if(limit) {
 		if(limit > 0 && limit <= 80) {
-			endpoint.searchParams.set("limit", String(limit));
+			params.set("limit", String(limit));
 		} else {
 			console.warn(`You specified ${limit} accounts but Mastodon only supports returning between 1 and 80 accounts from this endpoint. Defaulting to 40.`);
 		}
 	}
 
-	if(token) {
-		response = await fetch(endpoint, {
-			headers: {
-				"Authorization": `Bearer ${token}`
-			}
-		});
-	} else {
-		response = await fetch(endpoint);
-	}
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/following`, instanceUrl),
+		token,
+		params
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -399,19 +365,12 @@ export async function getAccountFollowing(
 	}
 }
 
-export async function getAccountFeaturedTags(instanceUrl: URL, id: string, token?: string): Promise<FeaturedTag[]> {
-	let response: Response;
+export async function getFeaturedTags(instanceUrl: URL, id: string, token?: string): Promise<FeaturedTag[]> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/featured_tags`, instanceUrl),
+		token
+	);
 	
-	if(token) {
-		response = await fetch(new URL(`/api/v1/accounts/${id}/featured_tags`, instanceUrl), {
-			headers: {
-				"Authorization": `Bearer ${token}`
-			}
-		});
-	} else {
-		response = await fetch(new URL(`/api/v1/accounts/${id}/featured_tags`, instanceUrl));
-	}
-
 	if(response.ok) {
 		const json = await response.json();
 		let out: FeaturedTag[] = [];
@@ -428,11 +387,10 @@ export async function getAccountFeaturedTags(instanceUrl: URL, id: string, token
 }
 
 export async function getListsContainingAccount(instanceUrl: URL, id: string, token: string): Promise<List[]> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/lists`, instanceUrl), {
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/lists`, instanceUrl),
+		token
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -453,7 +411,7 @@ export async function getListsContainingAccount(instanceUrl: URL, id: string, to
 	}
 }
 
-export async function followAccount(
+export async function follow(
 	instanceUrl: URL,
 	id: string,
 	token: string,
@@ -461,26 +419,26 @@ export async function followAccount(
 	notify?: boolean,
 	languages?: Intl.Locale[]
 ): Promise<Relationship> {
-	const endpoint = new URL(`/api/v1/accounts/${id}/follow`, instanceUrl);
+	const params = new URLSearchParams();
 
 	if(reblogs != undefined) {
-		endpoint.searchParams.set("reblogs", String(reblogs));
+		params.set("reblogs", String(reblogs));
 	}
 	if(notify != undefined) {
-		endpoint.searchParams.set("notify", String(notify));
+		params.set("notify", String(notify));
 	}
 	if(languages) {
 		for(const lang of languages) {
-			endpoint.searchParams.append("languages[]", lang.language);
+			params.append("languages[]", lang.language);
 		}
 	}
 
-	const response = await fetch(endpoint, {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/follow`, instanceUrl),
+		token,
+		params,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -494,13 +452,13 @@ export async function followAccount(
 	}
 }
 
-export async function unfollowAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/unfollow`, instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+export async function unfollow(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/unfollow`, instanceUrl),
+		token,
+		undefined,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -514,13 +472,13 @@ export async function unfollowAccount(instanceUrl: URL, id: string, token: strin
 	}
 }
 
-export async function removeAccountFromFollowers(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/remove_from_followers`, instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+export async function removeFromFollowers(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/remove_from_followers`, instanceUrl),
+		token,
+		undefined,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -534,13 +492,13 @@ export async function removeAccountFromFollowers(instanceUrl: URL, id: string, t
 	}
 }
 
-export async function blockAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/block`, instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+export async function block(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/block`, instanceUrl),
+		token,
+		undefined,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -554,13 +512,13 @@ export async function blockAccount(instanceUrl: URL, id: string, token: string):
 	}
 }
 
-export async function unblockAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/unblock`, instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+export async function unblock(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/unblock`, instanceUrl),
+		token,
+		undefined,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -574,28 +532,28 @@ export async function unblockAccount(instanceUrl: URL, id: string, token: string
 	}
 }
 
-export async function muteAccount(
+export async function mute(
 	instanceUrl: URL,
 	id: string,
 	token: string,
 	notifications?: boolean,
 	duration?: number
 ): Promise<Relationship> {
-	const endpoint = new URL(`/api/v1/accounts/${id}/mute`, instanceUrl);
+	const params = new URLSearchParams();
 
 	if(notifications != undefined) {
-		endpoint.searchParams.set("notifications", String(notifications));
+		params.set("notifications", String(notifications));
 	}
 	if(duration) {
-		endpoint.searchParams.set("duration", String(duration));
+		params.set("duration", String(duration));
 	}
 
-	const response = await fetch(endpoint, {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts${id}/mute`, instanceUrl),
+		token,
+		params,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -609,13 +567,13 @@ export async function muteAccount(
 	}
 }
 
-export async function unmuteAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/unmute`, instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+export async function unmute(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/unmute`, instanceUrl),
+		token,
+		undefined,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -629,13 +587,13 @@ export async function unmuteAccount(instanceUrl: URL, id: string, token: string)
 	}
 }
 
-export async function featureAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/pin`, instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+export async function feature(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/pin`, instanceUrl),
+		token,
+		undefined,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -649,13 +607,13 @@ export async function featureAccount(instanceUrl: URL, id: string, token: string
 	}
 }
 
-export async function unfeatureAccount(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
-	const response = await fetch(new URL(`/api/v1/accounts/${id}/unpin`, instanceUrl), {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+export async function unfeature(instanceUrl: URL, id: string, token: string): Promise<Relationship> {
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/unpin`, instanceUrl),
+		token,
+		undefined,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -670,18 +628,18 @@ export async function unfeatureAccount(instanceUrl: URL, id: string, token: stri
 }
 
 export async function setPrivateNote(instanceUrl: URL, id: string, token: string, comment?: string): Promise<Relationship> {
-	const endpoint = new URL(`/api/v1/accounts/${id}/unblock`, instanceUrl);
+	const params = new URLSearchParams();
 
 	if(comment) {
-		endpoint.searchParams.set("comment", comment);
+		params.set("comment", comment);
 	}
 	
-	const response = await fetch(endpoint, {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(
+		new URL(`/api/v1/accounts/${id}/note`, instanceUrl),
+		token,
+		params,
+		"POST"
+	);
 
 	if(response.ok) {
 		return new Relationship(await response.json());
@@ -696,22 +654,22 @@ export async function setPrivateNote(instanceUrl: URL, id: string, token: string
 }
 
 export async function getRelationships(instanceUrl: URL, token: string, ids?: string[], withSuspended?: boolean): Promise<Relationship[]> {
-	const endpoint = new URL("/api/v1/accounts/relationships", instanceUrl);
+	const params = new URLSearchParams;
 
 	if(ids) {
 		for(const id of ids) {
-			endpoint.searchParams.append("id[]", id);
+			params.append("id[]", id);
 		}
 	}
 	if(withSuspended != undefined) {
-		endpoint.searchParams.set("with_suspended", String(withSuspended));
+		params.set("with_suspended", String(withSuspended));
 	}
 
-	const response = await fetch(endpoint, {
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(
+		new URL("/api/v1/accounts/relationships", instanceUrl),
+		token,
+		params
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -733,19 +691,19 @@ export async function getRelationships(instanceUrl: URL, token: string, ids?: st
 }
 
 export async function findFamiliarFollowers(instanceUrl: URL, token: string, ids?: string[]): Promise<FamiliarFollowers[]> {
-	const endpoint = new URL("/api/v1/accounts/familiar_followers", instanceUrl);
+	const params = new URLSearchParams();
 
 	if(ids) {
 		for(const id of ids) {
-			endpoint.searchParams.append("id[]", id);
+			params.append("id[]", id);
 		}
 	}
 
-	const response = await fetch(endpoint, {
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(
+		new URL("/api/v1/accounts/familiar_followers", instanceUrl),
+		token,
+		params
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -766,7 +724,7 @@ export async function findFamiliarFollowers(instanceUrl: URL, token: string, ids
 	}
 }
 
-export async function searchForAccounts(
+export async function search(
 	instanceUrl: URL,
 	token: string,
 	query: string,
@@ -775,31 +733,30 @@ export async function searchForAccounts(
 	resolve?: boolean,
 	following?: boolean
 ): Promise<Account[]> {
-	const endpoint = new URL("/api/v1/accounts/search", instanceUrl);
+	const params = new URLSearchParams([["q", query]]);
 
-	endpoint.searchParams.set("q", query);
 	if(limit) {
 		if(limit > 0 && limit <= 80) {
-			endpoint.searchParams.set("limit", String(limit));
+			params.set("limit", String(limit));
 		} else {
 			console.warn(`You specified ${limit} accounts but Mastodon only supports returning between 1 and 80 accounts from this endpoint. Defaulting to 40.`);
 		}
 	}
 	if(offset) {
-		endpoint.searchParams.set("offset", String(offset));
+		params.set("offset", String(offset));
 	}
 	if(resolve != undefined) {
-		endpoint.searchParams.set("resolve", String(resolve));
+		params.set("resolve", String(resolve));
 	}
 	if(following != undefined) {
-		endpoint.searchParams.set("following", String(following));
+		params.set("following", String(following));
 	}
 
-	const response = await fetch(endpoint, {
-		headers: {
-			"Authorization": `Bearer ${token}`
-		}
-	});
+	const response = await fetchFromInstance(
+		new URL("/api/v1/accounts/search", instanceUrl),
+		token,
+		params
+	);
 
 	if(response.ok) {
 		const json = await response.json();
@@ -821,11 +778,11 @@ export async function searchForAccounts(
 }
 
 export async function lookupUsername(instanceUrl: URL, acct: string): Promise<Account> {
-	const endpoint = new URL("/api/v1/accounts/lookup", instanceUrl);
-	
-	endpoint.searchParams.set("acct", acct);
-
-	const response = await fetch(endpoint);
+	const response = await fetchFromInstance(
+		new URL("/api/v1/accounts/lookup", instanceUrl),
+		undefined,
+		new URLSearchParams([["acct", acct]])
+	);
 
 	if(response.ok) {
 		return new Account(await response.json());

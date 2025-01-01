@@ -1320,9 +1320,9 @@ export async function getTimeline(url: URL, endpoint: Timelines, tag?: string, s
 export async function fetchFromInstance(
 	endpoint: URL,
 	token?: string,
-	searchParams?: {key: string, value: string}[],
+	searchParams?: URLSearchParams,
 	method?: string,
-	body?: any
+	body?: any | FormData
 ): Promise<Response> {
 	const requestInit: RequestInit = {};
 
@@ -1334,14 +1334,16 @@ export async function fetchFromInstance(
 		(requestInit.headers as any)["Authorization"] = `Bearer ${token}`;
 	}
 
-	if(body) {
+	if(body instanceof FormData) {
+		requestInit.body = body;
+	} else if(body) {
 		(requestInit.headers as any)["Content-Type"] = "application/json";
 		requestInit.body = JSON.stringify(body);
 	}
 
 	if(searchParams) {
-		for(const pair of searchParams) {
-			endpoint.searchParams.append(pair.key, pair.value);
+		for(const [key, value] of searchParams) {
+			endpoint.searchParams.append(key, value);
 		}
 	}
 

@@ -101,7 +101,7 @@ export class ProfileHeader extends HTMLElement {
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if(name == "acctid") {
-			mastodon.accounts.getAccount(env.instanceUrl, newValue, env.token).then((account) => {
+			mastodon.accounts.get(env.instanceUrl, newValue, env.token).then((account) => {
 				this.setAccount(account);
 			});
 		} else if(name == "acct") {
@@ -663,7 +663,7 @@ export class Timeline extends HTMLElement {
 		console.log(`lt: ${this.instanceUrl} ${type} ${value}`);
 		switch(type) {
 			case "account":
-				mastodon.accounts.getAccountStatuses(this.instanceUrl, value, token ?? null, this.#lastPostId).then((data: mastodon.Status[]) => {
+				mastodon.accounts.getStatuses(this.instanceUrl, value, token ?? null, this.#lastPostId).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
