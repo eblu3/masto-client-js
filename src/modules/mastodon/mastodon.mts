@@ -5,6 +5,7 @@ export * as accounts from "./accounts/accounts.mjs";
 export * as profile from "./profile/profile.mjs";
 export * as statuses from "./statuses/statuses.mjs";
 export * as timelines from "./timelines/timelines.mjs";
+export * as search from "./search/search.mjs";
 export * as instance from "./instance/instance.mjs";
 
 // === ENUMS === //
@@ -774,6 +775,27 @@ export class Report {
 		this.statusIds = data["status_ids"];
 		this.ruleIds = data["rule_ids"];
 		this.targetAccount = data["target_account"];
+	}
+}
+
+export class Search {
+	accounts: Account[];
+	statuses: Status[];
+	hashtags: Tag[];
+
+	constructor(data: any) {
+		this.accounts = [];
+		for(const account of data["accounts"]) {
+			this.accounts.push(new Account(account));
+		}
+		this.statuses = [];
+		for(const status of data["statuses"]) {
+			this.statuses.push(new Status(status));
+		}
+		this.hashtags = [];
+		for(const tag of data["hashtags"]) {
+			this.hashtags.push(new Tag(tag));
+		}
 	}
 }
 
