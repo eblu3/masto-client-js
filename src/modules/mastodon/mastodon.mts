@@ -1347,19 +1347,20 @@ export async function fetchFromInstance(
 	body?: any | FormData
 ): Promise<Response> {
 	const requestInit: RequestInit = {};
+	const headers: Headers = new Headers();
 
 	if(method) {
 		requestInit.method = method;
 	}
 
 	if(token) {
-		(requestInit.headers as any)["Authorization"] = `Bearer ${token}`;
+		headers.set("Authorization", `Bearer ${token}`);
 	}
 
 	if(body instanceof FormData) {
 		requestInit.body = body;
 	} else if(body) {
-		(requestInit.headers as any)["Content-Type"] = "application/json";
+		headers.set("Content-Type", "application/json");
 		requestInit.body = JSON.stringify(body);
 	}
 
@@ -1368,6 +1369,8 @@ export async function fetchFromInstance(
 			endpoint.searchParams.append(key, value);
 		}
 	}
+
+	requestInit.headers = headers;
 
 	return fetch(endpoint, requestInit);
 }

@@ -33,7 +33,7 @@
 			grid-template-columns: 0 1fr;
 	}
 
-	app-nav-sidebar {
+	nav {
 		display: none;
 	}
 }
@@ -41,12 +41,12 @@
 @media(min-width: 600px) {
 	body {
 		grid-template-areas:
-			"sidebar header"
+			". header"
 			"sidebar main";
 		grid-template-columns: var(--sidebar-width) 1fr;
 	}
 
-	app-nav-sidebar {
+	nav {
 		display: block;
 	}
 
@@ -60,11 +60,19 @@
 	:root {
 		--sidebar-width: 8em;
 	}
+
+	nav {
+		font-size: large;
+	}
 }
 
 @media(min-width: 1024px) {
 	:root {
 		--sidebar-width: 16em;
+	}
+
+	nav {
+		font-size: x-large;
 	}
 }
 
@@ -114,17 +122,43 @@ body > header {
 	vertical-align: center;
 }
 
-app-nav-sidebar {
+nav {
 	grid-area: sidebar;
 
-	width: var(--sidebar-width);
-	height: 100vh;
+	padding: 0 1em;
 
-	margin-top: var(--header-height);
 	overflow: hidden;
 
 	position: sticky;
 	top: 0;
+
+	transition: font-size cubic-bezier(0,0,0,1) 0.125s;
+}
+
+nav a {
+	display: block;
+
+	margin: 0.5em 0;
+
+	text-align: end;
+	text-decoration: none;
+}
+
+nav a img, nav a .material-symbols-outlined {
+	margin-right: 0.33em;
+
+	vertical-align: middle;
+}
+
+nav a img {
+	max-width: 1.25em;
+	max-height: 1.25em;
+
+	border-radius: 100%;
+}
+
+nav a .material-symbols-outlined {
+	font-size: 1.25em;
 }
 
 app-timeline {

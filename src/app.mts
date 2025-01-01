@@ -15,12 +15,14 @@ interface ModalObject {
 	name: string;
 }
 
+let hostname: URL;
 let instanceUrl: URL;
 let token: string;
 let appInfo: mastodon.CredentialApplication;
 let authCode: string;
 let userToken: mastodon.Token;
 let preferences: Map<string, string | boolean | null>;
+let currentAccount: mastodon.CredentialAccount;
 
 const viewTarget = document.getElementById("view-target");
 const initialState = {name: "home"};
@@ -95,7 +97,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			}
 			if(!isPoppingState) {
 				if(data.acct) {
-					history.pushState(data, "", `/${data.acct}`);
+					history.pushState(data, "", `/@${data.acct}`);
 				} else {
 					history.pushState(data, "", `/user/${data.id}`);
 				}
@@ -144,6 +146,46 @@ function initView() {
 	}
 }
 
+function initSidebar() {
+	window.customElements.whenDefined("app-nav-sidebar").then((sidebar) => {
+		console.log(hostname);
+		document.getElementById("sidebar-target").appendChild(new sidebar([
+			{
+				name: "Home",
+				onClick: () => {
+					switchView({name: "home"});
+				},
+				icon: "home",
+				link: new URL("/home", hostname)
+			},
+			{
+				name: "Public",
+				onClick: () => {
+					switchView({name: "public"});
+				},
+				icon: "public",
+				link: new URL("/public", hostname)
+			},
+			{
+				name: "Local",
+				onClick: () => {
+					switchView({name: "local"});
+				},
+				icon: "communities",
+				link: new URL("/local", hostname)
+			},
+			{
+				name: "You",
+				onClick: () => {
+					switchView({name: "account", acct: currentAccount.acct});
+				},
+				icon: new URL(currentAccount.avatar),
+				link: new URL(`/@${currentAccount.acct}`, hostname)
+			}
+		]));
+	});
+}
+
 window.addEventListener("popstate", (event) => {
 	if(event.state) {
 		switchView(event.state, true);
@@ -190,9 +232,16 @@ if(localStorage.getItem("userToken")) {
 	userToken = JSON.parse(localStorage.getItem("userToken")) as mastodon.Token;
 }
 
+hostname = new URL("http://localhost:3000");
+
 mastodon.accounts.preferences.getUserPreferences(instanceUrl, token).then((prefs) => {
 	preferences = prefs;
-})
+});
+
+mastodon.accounts.verifyCredentials(instanceUrl, token).then((account) => {
+	currentAccount = account;
+	initSidebar();
+});
 
 initView();
 

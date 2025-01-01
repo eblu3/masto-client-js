@@ -2,13 +2,13 @@
 <head>
 	<title>mastodon client</title>
 	<link rel="stylesheet" href="/css/main.css">
-	<link rel="stylesheet" href="/fonts/material-symbols-outlined.css" />
+	<link rel="stylesheet" href="/fonts/material-symbols-outlined.css">
+	<link rel="stylesheet" href="/fonts/material-symbols-outlined-class.css">
 	<script src="/js/modules/custom_elements.mjs" type="module"></script>
 	<script src="/js/app.mjs" type="module"></script>
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-	<app-nav-sidebar></app-nav-sidebar>
 	<header>
 		<h1 style="display:inline-block;">WIP</h1>
 		<input id="debug-view-switch" placeholder="view" style="display:inline-block;">
@@ -17,5 +17,6 @@
 		<input id="debug-modal" placeholder="modal" style="display:inline-block;">
 		<button id="modal-button">show modal</button>
 	</header>
+	<nav id="sidebar-target"></nav>
 	<main id="view-target"></main>
 </body>

@@ -817,22 +817,53 @@ export class Timeline extends HTMLElement {
 }
 
 export class NavigationSidebar extends HTMLElement {
+	#items: {name: string, onClick: () => void, icon?: URL | string, link?: URL}[];
 	#youLink: HTMLAnchorElement;
 	
-	constructor() {
+	constructor(items: {name: string, onClick: () => void, icon?: URL | string, link?: URL}[]) {
 		super();
+
+		this.#items = items;
 	}
 
 	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, navigationStylesheet];
-		shadow.appendChild(navigationSidebarTemplate.cloneNode(true));
+		for(const item of this.#items) {
+			const navLink = document.createElement("a");
 
-		this.#youLink = shadow.getElementById("you-link") as HTMLAnchorElement;
+			navLink.innerText = item.name;
+
+			if(item.icon) {
+				let icon: HTMLElement;
+				if(item.icon instanceof URL) {
+					icon = document.createElement("img");
+					(icon as HTMLImageElement).src = item.icon.href;
+				} else {
+					icon = document.createElement("span");
+					icon.classList.add("material-symbols-outlined");
+					icon.innerText = item.icon;
+				}
+
+				icon.ariaHidden = "true";
+				navLink.prepend(icon);
+			}
+
+			if(item.link) {
+				navLink.href = item.link.href;
+			}
+
+			this.appendChild(navLink);
+			navLink.addEventListener("click", (event) => {
+				event.preventDefault();
+				item.onClick();
+			});
+		}
+		// shadow.appendChild(navigationSidebarTemplate.cloneNode(true));
+
+		// this.#youLink = shadow.getElementById("you-link") as HTMLAnchorElement;
 		
-		mastodon.accounts.verifyCredentials(env.instanceUrl, env.token).then((account) => {
-			this.#youLink.href = `/user/?acct=@${account.acct}`;
-		})
+		// mastodon.accounts.verifyCredentials(env.instanceUrl, env.token).then((account) => {
+		// 	this.#youLink.href = `/user/?acct=@${account.acct}`;
+		// })
 	}
 }
 
