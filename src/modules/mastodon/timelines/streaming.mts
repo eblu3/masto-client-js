@@ -59,8 +59,6 @@ export function establishWebSocketConnection(
 		const data = JSON.parse(message.data);
 		const event = data["event"] as string;
 		const payload = JSON.parse(data.payload);
-		console.log(event);
-		console.log(payload);
 	});
 
 	return connection;
