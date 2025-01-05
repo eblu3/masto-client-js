@@ -10,7 +10,6 @@ let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
 let statusStylesheet: CSSStyleSheet;
 let linkCardStylesheet: CSSStyleSheet;
-let navigationStylesheet: CSSStyleSheet;
 let postBoxStylesheet: CSSStyleSheet;
 let modalStylesheet: CSSStyleSheet;
 let menuStylesheet: CSSStyleSheet;
@@ -24,7 +23,6 @@ let statusContentWarnedTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
 let linkCardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
-let navigationSidebarTemplate: DocumentFragment;
 let postBoxTemplate: DocumentFragment;
 let tagInputTemplate: DocumentFragment;
 let settingsModalTemplate: DocumentFragment;
@@ -131,7 +129,7 @@ export class StatusHeader extends HTMLElement {
 	#avatar: HTMLImageElement;
 	#displayName: HTMLSpanElement;
 	#handle: HTMLSpanElement;
-	#profileLink: HTMLAnchorElement;
+	profileLink: HTMLAnchorElement;
 	#postTime: HTMLTimeElement;
 
 	constructor() {
@@ -155,7 +153,14 @@ export class StatusHeader extends HTMLElement {
 	}
 
 	setProfileLink(url: URL) {
-		this.#profileLink.href = url.href;
+		this.profileLink.href = url.href;
+	}
+
+	setProfileLinkClickEvent(onClick: () => void) {
+		this.addEventListener("click", (event) => {
+			event.preventDefault();
+			onClick();
+		});
 	}
 
 	setTime(time: Date) {
@@ -179,7 +184,7 @@ export class StatusHeader extends HTMLElement {
 		this.#avatar = this.querySelector("#avatar") as HTMLImageElement;
 		this.#displayName = this.querySelector("#display-name");
 		this.#handle = this.querySelector("#acct");
-		this.#profileLink = this.querySelector("#profile-link") as HTMLAnchorElement;
+		this.profileLink = this.querySelector("#profile-link") as HTMLAnchorElement;
 		this.#postTime = this.querySelector("#time") as HTMLTimeElement;
 	}
 }
@@ -368,12 +373,16 @@ export class Status extends Card {
 	footer: StatusFooter;
 	content: StatusContent;
 
-	constructor(instanceUrl: URL, status: mastodon.Status) {
+	onProfileNameClick: () => void;
+
+	constructor(instanceUrl: URL, status: mastodon.Status, onProfileNameClick?: () => void) {
 		super();
 
 		this.instanceUrl = instanceUrl;
 		this.status = status;
 		status.reblog ? this.isReblog = true : this.isReblog = false;
+
+		this.onProfileNameClick = onProfileNameClick;
 	}
 
 	setStatus(status: mastodon.Status) {
@@ -396,8 +405,12 @@ export class Status extends Card {
 			status.account.avatar,
 			outDisplayName,
 			parseHandle(`@${status.account.acct}`),
-			localProfileUrl
+			new URL(`/@${status.account.acct}`, window.location.origin)
 		);
+		this.header.profileLink.addEventListener("click", (event) => {
+			event.preventDefault();
+			this.onProfileNameClick();
+		});
 		this.header.setTime(status.createdAt);
 
 		this.footer.setStatusInfo(status.id, undefined, status.reblogged, status.favourited);
@@ -439,20 +452,27 @@ export class Status extends Card {
 		}
 
 		if(status.card != null) {
-			oEmbed.getoEmbed(status.card.url).then((response) => {
+			oEmbed.getoEmbed(status.card.url, undefined, 512, "json").then((response) => {
 					if(response) {
 						console.log(response);
 						if(response instanceof oEmbed.VideoResponse || response instanceof oEmbed.RichResponse) {
-							if(response.html.body.getElementsByTagName("iframe").length > 0) {
-								response.html.body.childNodes.forEach((node) => {
-									this.content.appendChild(node);
-								});
+							let iframe: HTMLIFrameElement;
+							
+							// we add an exception for tumblr posts here since they do a thing where they return a script that then *loads* the tumblr post
+							if(response.html.body.getElementsByTagName("iframe").length > 0 || response.html.body.querySelector(".tumblr-post")) {
+								iframe = response.html.body.getElementsByTagName("iframe").item(0);
 							} else {
-								const iframe = document.createElement("iframe");
-								iframe.width = String(response.width);
+								iframe = document.createElement("iframe");
 								iframe.srcdoc = response.html.body.innerHTML;
-								this.content.appendChild(iframe);
 							}
+
+							iframe.width = "";
+							iframe.height = "";
+							iframe.style.aspectRatio = `${response.width}/${response.height}`;
+							this.content.appendChild(iframe);
+							iframe.addEventListener("load", (event) => {
+								iframe.height = String(iframe.scrollHeight);
+							});
 						}
 					} else {
 						this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
@@ -535,9 +555,11 @@ export class Status extends Card {
 
 export class StatusThread extends Status {
 	rootStatus: mastodon.Status;
+
+	onProfileLinkClick: () => void;
 	
-	constructor(instanceUrl: URL, status: mastodon.Status) {
-		super(instanceUrl, status);
+	constructor(instanceUrl: URL, status: mastodon.Status, onProfileLinkClick?: () => void) {
+		super(instanceUrl, status, onProfileLinkClick);
 	}
 	
 	setStatus(status: mastodon.Status) {
@@ -619,21 +641,28 @@ export class Timeline extends HTMLElement {
 
 	instanceUrl: URL;
 
+	statuses: Status[];
+
+	onProfileLinkClick: () => void;
+
 	#loadMoreButton: HTMLButtonElement;
 	
 	#lastPostId: string;
 	#showBoosts: boolean;
 	#showReplies: boolean;
 	
-	constructor(instanceUrl: URL) {
+	constructor(instanceUrl: URL, onProfileLinkClick?: () => void) {
 		super();
 
 		this.instanceUrl = instanceUrl;
+		this.statuses = [];
+		this.onProfileLinkClick = onProfileLinkClick;
 	}
 
 	prependStatus(status: mastodon.Status) {
 		let statusElement: Status;
 		status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status) : statusElement = new Status(this.instanceUrl, status);
+		this.statuses.unshift(statusElement);
 		this.prepend(statusElement);
 	}
 
@@ -645,7 +674,8 @@ export class Timeline extends HTMLElement {
 				continue;
 			} else {
 				let statusElement: Status;
-				status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status) : statusElement = new Status(this.instanceUrl, status);
+				status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status, this.onProfileLinkClick) : statusElement = new Status(this.instanceUrl, status, this.onProfileLinkClick);
+				this.statuses.push(statusElement);
 				statuses.appendChild(statusElement);
 			}
 		}
@@ -1214,18 +1244,24 @@ export class Menu extends HTMLElement {
 
 export class HomeView extends HTMLElement {
 	instanceUrl: URL;
+
+	timeline: Timeline;
 	
-	constructor(instanceUrl: URL) {
+	onProfileLinkClick: () => void;
+
+	constructor(instanceUrl: URL, onProfileLinkClick?: () => void) {
 		super();
 
 		this.instanceUrl = instanceUrl;
+		this.onProfileLinkClick = onProfileLinkClick;
 	}
 
 	connectedCallback() {
 		const postBox = new PostBox();
 		
-		const homeTimelineObject = new Timeline(this.instanceUrl);
+		const homeTimelineObject = new Timeline(this.instanceUrl, this.onProfileLinkClick);
 		homeTimelineObject.setAttribute("type", "home");
+		this.timeline = homeTimelineObject;
 
 		this.appendChild(postBox);
 		this.appendChild(homeTimelineObject);
@@ -1332,7 +1368,6 @@ async function initTemplates() {
 	statusTemplate = await getTemplate("/templates/status.html", "status");
 	linkCardTemplate = await getTemplate("/templates/link-card.html", "card");
 	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
-	navigationSidebarTemplate = await getTemplate("/templates/navigation.html", "sidebar");
 	postBoxTemplate = await getTemplate("/templates/post.html", "postbox");
 	tagInputTemplate = await getTemplate("/templates/post.html", "taginput");
 	settingsModalTemplate = await getTemplate("/templates/modal.html", "settings");
@@ -1345,7 +1380,6 @@ async function initStylesheets() {
 	profileHeaderStylesheet = await getStylesheet("/css/components/profile-header.css");
 	statusStylesheet = await getStylesheet("/css/components/status.css");
 	linkCardStylesheet = await getStylesheet("/css/components/link-card.css");
-	navigationStylesheet = await getStylesheet("/css/components/navigation.css");
 	postBoxStylesheet = await getStylesheet("/css/components/post-box.css");
 	modalStylesheet = await getStylesheet("/css/components/modal.css");
 	menuStylesheet = await getStylesheet("/css/components/menu.css");

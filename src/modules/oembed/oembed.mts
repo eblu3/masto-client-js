@@ -93,16 +93,32 @@ export class RichResponse extends Response {
 	}
 }
 
-export async function getoEmbed(url: URL): Promise<PhotoResponse | VideoResponse | LinkResponse | RichResponse | Response> {
+export async function getoEmbed(
+	url: URL,
+	maxWidth?: number,
+	maxHeight?: number,
+	format?: string
+): Promise<PhotoResponse | VideoResponse | LinkResponse | RichResponse | Response> {
 	let provider: {
 		provider_name: string,
 		provider_url: string,
 		endpoints: {schemes: string[], url: string}[]
 	};
 	let endpoint: {schemes: string[], url: string};
+	const params = new URLSearchParams([["url", url.href]]);
 
 	if(url.hostname == "www.tumblr.com") {
 		url = handleTumblrLink(url); // tumblr oembeds can't really do new tumblr links so we hardcode a converter to the old one here
+	}
+
+	if(maxWidth) {
+		params.set("maxwidth", String(maxWidth));
+	}
+	if(maxHeight) {
+		params.set("maxheight", String(maxHeight));
+	}
+	if(format) {
+		params.set("format", format);
 	}
 
 	for(const site of providers) {
@@ -143,8 +159,9 @@ export async function getoEmbed(url: URL): Promise<PhotoResponse | VideoResponse
 
 	if(endpoint) {
 		const fetchEndpoint = new URL(endpoint.url);
-		fetchEndpoint.searchParams.set("format", "json");
-		fetchEndpoint.searchParams.set("url", url.href);
+		for(const [key, value] of params) {
+			fetchEndpoint.searchParams.append(key, value);
+		}
 
 		const response = await (await fetch(fetchEndpoint)).json();
 

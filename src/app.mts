@@ -60,6 +60,11 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			if(!isPoppingState) {
 				history.pushState(data, "", "/home");
 			}
+			for(const status of (currentView as customElements.HomeView).timeline.statuses) {
+				status.header.setProfileLinkClickEvent(() => {
+					switchView({name: "account", acct: status.status.account.acct});
+				});
+			}
 			break;
 		case "public":
 			currentState = data;
@@ -148,7 +153,6 @@ function initView() {
 
 function initSidebar() {
 	window.customElements.whenDefined("app-nav-sidebar").then((sidebar) => {
-		console.log(hostname);
 		document.getElementById("sidebar-target").appendChild(new sidebar([
 			{
 				name: "Home",
@@ -241,9 +245,8 @@ mastodon.accounts.preferences.getUserPreferences(instanceUrl, token).then((prefs
 mastodon.accounts.verifyCredentials(instanceUrl, token).then((account) => {
 	currentAccount = account;
 	initSidebar();
+	initView();
 });
-
-initView();
 
 // mastodon.createApplication(instanceUrl, "thingy 3: god I hope this works", new URL("/auth", location.origin).href, "read", new URL("https://example.com")).then((app) => {
 // 	localStorage.setItem("appInfo", JSON.stringify(app));
