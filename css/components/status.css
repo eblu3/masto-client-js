@@ -29,12 +29,16 @@ button {
 	font-size: larger;
 
 	background: none;
-
-	cursor: pointer;
 }
 
-button:hover, button:focus {
+button:disabled {
+	opacity: 0.5;
+}
+
+button:not(:disabled):hover, button:not(:disabled):focus {
 	background-color: var(--accent-color-darker);
+
+	cursor: pointer;
 }
 
 header {
@@ -59,7 +63,7 @@ address {
 	align-self: center;
 }
 
-#avatar {
+#avatar, #first-status .avatar {
 	max-width: var(--post-avatar-size);
 	max-height: var(--post-avatar-size);
 	aspect-ratio: 1;

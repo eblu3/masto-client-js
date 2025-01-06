@@ -55,15 +55,17 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 	switch(data.name) {
 		case "home":
 			currentState = data;
-			currentView = new customElements.HomeView(instanceUrl);
+			currentView = new customElements.HomeView(instanceUrl, {
+				onStatusClick: (id: string) => {
+					switchView({name: "status", id: id});
+				},
+				onProfileLinkClick: (acct: string) => {
+					switchView({name: "account", acct: acct});
+				}
+			});
 			viewTarget.appendChild(currentView);
 			if(!isPoppingState) {
 				history.pushState(data, "", "/home");
-			}
-			for(const status of (currentView as customElements.HomeView).timeline.statuses) {
-				status.header.setProfileLinkClickEvent(() => {
-					switchView({name: "account", acct: status.status.account.acct});
-				});
 			}
 			break;
 		case "public":

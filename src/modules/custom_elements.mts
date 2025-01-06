@@ -21,6 +21,7 @@ let statusFooterTemplate: DocumentFragment;
 let statusContentTemplate: DocumentFragment;
 let statusContentWarnedTemplate: DocumentFragment;
 let statusTemplate: DocumentFragment;
+let statusThreadTemplate: DocumentFragment;
 let linkCardTemplate: DocumentFragment;
 let timelineTemplate: DocumentFragment;
 let postBoxTemplate: DocumentFragment;
@@ -39,6 +40,11 @@ interface MenuItem {
 	onClick: () => void;
 	icon?: string | URL;
 	iconOptions?: {option: string, value: string}[];
+}
+
+interface StatusEvents {
+	onStatusClick?: (id: string) => void;
+	onProfileLinkClick?: (acct: string) => void;
 }
 
 function clickOutsideHandler(event: Event, elementToDetect: HTMLElement) {
@@ -124,6 +130,7 @@ export class Card extends HTMLElement {
 
 export class StatusHeader extends HTMLElement {
 	menuButton: HTMLButtonElement;
+	displayMenuButton: boolean;
 	
 	#label: HTMLParagraphElement;
 	#avatar: HTMLImageElement;
@@ -132,8 +139,10 @@ export class StatusHeader extends HTMLElement {
 	profileLink: HTMLAnchorElement;
 	#postTime: HTMLTimeElement;
 
-	constructor() {
+	constructor(displayMenuButton?: boolean) {
 		super();
+
+		displayMenuButton != undefined ? this.displayMenuButton = displayMenuButton : this.displayMenuButton = false;
 	}
 
 	setLabel(text: string) {
@@ -154,13 +163,6 @@ export class StatusHeader extends HTMLElement {
 
 	setProfileLink(url: URL) {
 		this.profileLink.href = url.href;
-	}
-
-	setProfileLinkClickEvent(onClick: () => void) {
-		this.addEventListener("click", (event) => {
-			event.preventDefault();
-			onClick();
-		});
 	}
 
 	setTime(time: Date) {
@@ -186,6 +188,10 @@ export class StatusHeader extends HTMLElement {
 		this.#handle = this.querySelector("#acct");
 		this.profileLink = this.querySelector("#profile-link") as HTMLAnchorElement;
 		this.#postTime = this.querySelector("#time") as HTMLTimeElement;
+
+		if(!this.displayMenuButton) {
+			this.menuButton.remove();
+		}
 	}
 }
 
@@ -209,6 +215,15 @@ export class StatusFooter extends HTMLElement {
 
 	setAbleToBoost(able: boolean) {
 		this.#ableToBoost = able;
+		this.#boostButton.disabled = !able;
+
+		if(able) {
+			this.#boostButton.title = "Boost";
+			this.#boostButton.ariaLabel = "Boost";
+		} else {
+			this.#boostButton.title = "Cannot boost this post.";
+			this.#boostButton.ariaLabel = "Cannot boost this post.";
+		}
 	}
 
 	setBoosted(boosted: boolean) {
@@ -365,6 +380,7 @@ export class StatusContentWarned extends StatusContent {
 
 export class Status extends Card {
 	instanceUrl: URL;
+	isUnfocused: boolean;
 
 	status: mastodon.Status;
 	isReblog: boolean;
@@ -373,23 +389,33 @@ export class Status extends Card {
 	footer: StatusFooter;
 	content: StatusContent;
 
-	onProfileNameClick: () => void;
+	events: StatusEvents;
 
-	constructor(instanceUrl: URL, status: mastodon.Status, onProfileNameClick?: () => void) {
+	template: DocumentFragment;
+
+	constructor(
+		instanceUrl: URL,
+		status: mastodon.Status,
+		events?: StatusEvents,
+		isUnfocused?: boolean
+	) {
 		super();
 
 		this.instanceUrl = instanceUrl;
+		isUnfocused != undefined ? this.isUnfocused = isUnfocused : this.isUnfocused = false;
 		this.status = status;
 		status.reblog ? this.isReblog = true : this.isReblog = false;
 
-		this.onProfileNameClick = onProfileNameClick;
+		this.events = events;
+
+		this.template = statusTemplate;
 	}
 
 	setStatus(status: mastodon.Status) {
 		const localProfileUrl = new URL("./user/", window.location.origin);
 		localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
 
-		this.id = status.id;
+		this.id = `status-${status.id}`;
 
 		if(this.isReblog) {
 			this.header.setLabel(`<a href="/user/?acct=@${this.status.account.acct}"><span class="material-symbols-outlined">repeat</span> <img class="avatar inline-img" src="${this.status.account.avatar}" alt=""> <span class="display-name">${(this.status.account.displayName || this.status.account.displayName != "") ? renderEmojis(this.status.account.displayName, this.status.account.emojis) : this.status.account.username}</span> boosted</a>`);
@@ -401,20 +427,30 @@ export class Status extends Card {
 
 		let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) as string : status.account.username;
 
+		// setting header info
 		this.header.setProfileInfo(
 			status.account.avatar,
 			outDisplayName,
 			parseHandle(`@${status.account.acct}`),
 			new URL(`/@${status.account.acct}`, window.location.origin)
 		);
-		this.header.profileLink.addEventListener("click", (event) => {
-			event.preventDefault();
-			this.onProfileNameClick();
-		});
 		this.header.setTime(status.createdAt);
 
-		this.footer.setStatusInfo(status.id, undefined, status.reblogged, status.favourited);
-		this.footer.connectReplyButton(this);
+		// setting click events in header
+		this.header.profileLink.addEventListener("click", (event) => {
+			event.preventDefault();
+			this.events.onProfileLinkClick(status.account.acct);
+		});
+
+		if(!this.isUnfocused) {
+			this.footer.setStatusInfo(
+				status.id,
+				(status.visibility != mastodon.StatusVisibility.Private && status.visibility != mastodon.StatusVisibility.Direct),
+				status.reblogged,
+				status.favourited
+			);
+			this.footer.connectReplyButton(this);
+		}
 		
 		if(status.language) {
 			this.setAttribute("lang", status.language.language);
@@ -447,11 +483,16 @@ export class Status extends Card {
 
 		this.content.setContent(renderEmojis(status.content, status.emojis));
 
-		if(status.mediaAttachments.length > 0) {
+		if(this.isUnfocused) {
+			this.header.style.fontSize = "0.9em";
+			this.content.style.fontSize = "0.9em";
+		}
+
+		if(status.mediaAttachments.length > 0 && !this.isUnfocused) {
 			this.content.setAttachments(renderAttachments(status.mediaAttachments));
 		}
 
-		if(status.card != null) {
+		if(status.card != null && !this.isUnfocused) {
 			oEmbed.getoEmbed(status.card.url, undefined, 512, "json").then((response) => {
 					if(response) {
 						console.log(response);
@@ -485,17 +526,70 @@ export class Status extends Card {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		const header = new StatusHeader;
-		const footer = new StatusFooter;
+		const header = new StatusHeader(!this.isUnfocused);
 
 		shadow.adoptedStyleSheets = [materialIcons, commonStylesheet, statusStylesheet];
 
-		shadow.appendChild(statusTemplate.cloneNode(true));
+		shadow.appendChild(this.template.cloneNode(true));
 		shadow.getElementById("status-root").prepend(header);
-		shadow.getElementById("status-root").appendChild(footer);
 
 		this.header = header;
-		this.footer = footer;
+
+		if(!this.isUnfocused) {
+			const footer = new StatusFooter;
+
+			shadow.getElementById("status-root").appendChild(footer);
+			this.footer = footer;
+
+			this.header.menuButton.addEventListener("click", (event) => {
+				console.log(event);
+				
+				let localUrl: URL;
+				let remoteUrl: URL;
+
+				if(this.isReblog) {
+					localUrl = new URL(`/@${this.status.reblog.account.acct}/${this.status.reblog.id}`, this.instanceUrl);
+					remoteUrl = this.status.reblog.url;
+				} else {
+					localUrl = new URL(`/@${this.status.account.acct}/${this.status.id}`, this.instanceUrl);
+					remoteUrl = this.status.url;
+				}
+				
+				const menu = new Menu([
+					{
+						categoryName: "Debug",
+						contents: [
+							{name: "Log status", onClick: () => {console.log(this.status)}, icon: "description"},
+							{name: "Log status ID", onClick: () => {console.log(this.status.id)}, icon: "id_card"},
+							{name: "Log status content", onClick: () => {console.log(this.status.content)}, icon: "description"}
+						]
+					},
+					{
+						categoryName: "Instance",
+						contents: [
+							{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language"},
+							{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language"}
+						]
+					}
+				]);
+				const viewTarget = document.getElementById("view-target");
+				if(viewTarget) {
+					menu.style.top = `${this.header.menuButton.offsetTop - viewTarget.scrollTop}px`;
+					menu.style.left = `${this.header.menuButton.offsetLeft - viewTarget.scrollLeft}px`;
+				} else {
+					menu.style.top = `${this.header.menuButton.offsetTop}px`;
+					menu.style.left = `${this.header.menuButton.offsetLeft}px`;
+				}
+				this.parentElement.appendChild(menu);
+
+				// we put the event listener on a timeout so that it doesn't try to detect a click before the menu opens
+				setTimeout(() => {
+					window.addEventListener("click", (event) => {
+						clickOutsideHandler(event, menu);
+					});
+				}, 50);
+			});
+		}
 
 		if(this.isReblog) {
 			this.setStatus(this.status.reblog);
@@ -503,63 +597,29 @@ export class Status extends Card {
 			this.setStatus(this.status);
 		}
 
-		this.header.menuButton.addEventListener("click", (event) => {
-			console.log(event);
-			
-			let localUrl: URL;
-			let remoteUrl: URL;
-
-			if(this.isReblog) {
-				localUrl = new URL(`/@${this.status.reblog.account.acct}/${this.status.reblog.id}`, this.instanceUrl);
-				remoteUrl = this.status.reblog.url;
-			} else {
-				localUrl = new URL(`/@${this.status.account.acct}/${this.status.id}`, this.instanceUrl);
-				remoteUrl = this.status.url;
-			}
-			
-			const menu = new Menu([
-				{
-					categoryName: "Debug",
-					contents: [
-						{name: "Log status ID", onClick: () => {console.log(this.status.id)}, icon: "id_card"},
-						{name: "Log status content", onClick: () => {console.log(this.status.content)}, icon: "description"}
-					]
-				},
-				{
-					categoryName: "Instance",
-					contents: [
-						{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language"},
-						{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language"}
-					]
-				}
-			]);
-			const viewTarget = document.getElementById("view-target");
-			if(viewTarget) {
-				menu.style.top = `${this.header.menuButton.offsetTop - viewTarget.scrollTop}px`;
-				menu.style.left = `${this.header.menuButton.offsetLeft - viewTarget.scrollLeft}px`;
-			} else {
-				menu.style.top = `${this.header.menuButton.offsetTop}px`;
-				menu.style.left = `${this.header.menuButton.offsetLeft}px`;
-			}
-			this.parentElement.appendChild(menu);
-
-			// we put the event listener on a timeout so that it doesn't try to detect a click before the menu opens
-			setTimeout(() => {
-				window.addEventListener("click", (event) => {
-					clickOutsideHandler(event, menu);
-				});
-			}, 50);
-		});
+		// keeping this disabled until I find a way to not have this override all other elements within the status
+		
+		// this.content.addEventListener("click", (event) => {
+		// 	this.events.onStatusClick(this.status.id);
+		// });
 	}
 }
 
 export class StatusThread extends Status {
 	rootStatus: mastodon.Status;
-
-	onProfileLinkClick: () => void;
 	
-	constructor(instanceUrl: URL, status: mastodon.Status, onProfileLinkClick?: () => void) {
-		super(instanceUrl, status, onProfileLinkClick);
+	constructor(
+		instanceUrl: URL,
+		status: mastodon.Status,
+		events?: StatusEvents
+	) {
+		super(
+			instanceUrl,
+			status,
+			events
+		);
+
+		this.template = statusThreadTemplate;
 	}
 	
 	setStatus(status: mastodon.Status) {
@@ -569,8 +629,8 @@ export class StatusThread extends Status {
 
 		mastodon.statuses.getStatusContext(this.instanceUrl, this.rootStatus.id, env.token).then((context) => {
 			if(context.ancestors.length > 0) {
-				const firstStatus = new StatusThread(this.instanceUrl, context.ancestors[0]);
-				this.shadowRoot.prepend(firstStatus);
+				const firstStatus = new Status(this.instanceUrl, context.ancestors[0], undefined, true);
+				this.shadowRoot.getElementById("before-root-status").appendChild(firstStatus);
 				if(context.ancestors.length > 1) {
 					this.shadowRoot.insertBefore(new Text(`+${context.ancestors.length - 1} more`), this.shadowRoot.getElementById("status-root"));
 				}
@@ -643,7 +703,7 @@ export class Timeline extends HTMLElement {
 
 	statuses: Status[];
 
-	onProfileLinkClick: () => void;
+	statusEvents: StatusEvents;
 
 	#loadMoreButton: HTMLButtonElement;
 	
@@ -651,17 +711,25 @@ export class Timeline extends HTMLElement {
 	#showBoosts: boolean;
 	#showReplies: boolean;
 	
-	constructor(instanceUrl: URL, onProfileLinkClick?: () => void) {
+	constructor(instanceUrl: URL, statusEvents?: StatusEvents) {
 		super();
 
 		this.instanceUrl = instanceUrl;
 		this.statuses = [];
-		this.onProfileLinkClick = onProfileLinkClick;
+		this.statusEvents = statusEvents;
 	}
 
 	prependStatus(status: mastodon.Status) {
 		let statusElement: Status;
-		status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status) : statusElement = new Status(this.instanceUrl, status);
+		status.inReplyToId ? statusElement = new StatusThread(
+			this.instanceUrl,
+			status,
+			this.statusEvents
+		) : statusElement = new Status(
+			this.instanceUrl,
+			status,
+			this.statusEvents
+		);
 		this.statuses.unshift(statusElement);
 		this.prepend(statusElement);
 	}
@@ -674,7 +742,15 @@ export class Timeline extends HTMLElement {
 				continue;
 			} else {
 				let statusElement: Status;
-				status.inReplyToId ? statusElement = new StatusThread(this.instanceUrl, status, this.onProfileLinkClick) : statusElement = new Status(this.instanceUrl, status, this.onProfileLinkClick);
+				status.inReplyToId ? statusElement = new StatusThread(
+					this.instanceUrl,
+					status,
+					this.statusEvents
+				) : statusElement = new Status(
+					this.instanceUrl,
+					status,
+					this.statusEvents
+				);
 				this.statuses.push(statusElement);
 				statuses.appendChild(statusElement);
 			}
@@ -712,6 +788,12 @@ export class Timeline extends HTMLElement {
 
 						if(event == mastodon.timelines.streaming.Events.NewStatus) {
 							this.prependStatus(new mastodon.Status(payload));
+						}
+
+						if(event == mastodon.timelines.streaming.Events.StatusDeleted) {
+							try {
+								this.querySelector(`#status-${payload}`).remove();
+							} catch {}
 						}
 					});
 				});
@@ -1247,19 +1329,22 @@ export class HomeView extends HTMLElement {
 
 	timeline: Timeline;
 	
-	onProfileLinkClick: () => void;
+	statusEvents: StatusEvents;
 
-	constructor(instanceUrl: URL, onProfileLinkClick?: () => void) {
+	constructor(instanceUrl: URL, statusEvents?: StatusEvents) {
 		super();
 
 		this.instanceUrl = instanceUrl;
-		this.onProfileLinkClick = onProfileLinkClick;
+		this.statusEvents = statusEvents;
 	}
 
 	connectedCallback() {
 		const postBox = new PostBox();
 		
-		const homeTimelineObject = new Timeline(this.instanceUrl, this.onProfileLinkClick);
+		const homeTimelineObject = new Timeline(
+			this.instanceUrl,
+			this.statusEvents
+		);
 		homeTimelineObject.setAttribute("type", "home");
 		this.timeline = homeTimelineObject;
 
@@ -1366,6 +1451,7 @@ async function initTemplates() {
 	statusContentTemplate = await getTemplate("/templates/status.html", "content");
 	statusContentWarnedTemplate = await getTemplate("/templates/status.html", "content-cw");
 	statusTemplate = await getTemplate("/templates/status.html", "status");
+	statusThreadTemplate = await getTemplate("/templates/status.html", "status-thread");
 	linkCardTemplate = await getTemplate("/templates/link-card.html", "card");
 	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
 	postBoxTemplate = await getTemplate("/templates/post.html", "postbox");

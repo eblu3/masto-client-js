@@ -4,6 +4,13 @@
 	</article>
 </template>
 
+<template id="status-thread">
+	<div id="before-root-status"></div>
+	<article id="status-root" class="threaded-status-bottom">
+		<main id="status-content-target"></main>
+	</article>
+</template>
+
 <template id="header">
 	<p id="label" style="display: inline"></p>
 	<div style="display: flex;">
@@ -20,7 +27,7 @@
 </template>
 
 <template id="footer">
-	<button id="reply-button" class="material-symbols-outlined">reply</button><button id="boost-button" class="material-symbols-outlined">repeat</button><button id="favorite-button" class="material-symbols-outlined">star</button>
+	<button id="reply-button" class="material-symbols-outlined" title="Reply" aria-label="Reply">reply</button><button id="boost-button" class="material-symbols-outlined" title="Boost" aria-label="Boost">repeat</button><button id="favorite-button" class="material-symbols-outlined" title="Favorite" aria-label="Favorite">star</button>
 </template>
 
 <template id="content">
