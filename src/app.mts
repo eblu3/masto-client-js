@@ -8,6 +8,7 @@ interface ViewObject {
 	name: string;
 	id?: string;
 	acct?: string;
+	status?: mastodon.Status;
 	modal?: ModalObject;
 }
 
@@ -107,6 +108,39 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 					history.pushState(data, "", `/@${data.acct}`);
 				} else {
 					history.pushState(data, "", `/user/${data.id}`);
+				}
+			}
+			break;
+		case "status":
+			currentState = data;
+			if(data.id && !data.status) {
+				mastodon.statuses.getStatus(instanceUrl, data.id, token).then((status) => {
+					currentView = new customElements.StatusView(instanceUrl, status, {
+						onStatusClick: (id: string) => {
+							switchView({name: "status", id: id});
+						},
+						onProfileLinkClick: (acct: string) => {
+							switchView({name: "account", acct: acct});
+						}
+					});
+					viewTarget.appendChild(currentView);
+				});
+			} else if(data.status) {
+				currentView = new customElements.StatusView(instanceUrl, data.status, {
+					onStatusClick: (id: string) => {
+						switchView({name: "status", id: id});
+					},
+					onProfileLinkClick: (acct: string) => {
+						switchView({name: "account", acct: acct});
+					}
+				});
+				viewTarget.appendChild(currentView);
+			}
+			if(!isPoppingState) {
+				if(data.acct) {
+					history.pushState(data, "", `/@${data.acct}/${data.id}`);
+				} else {
+					history.pushState(data, "", `/status/${data.id}`);
 				}
 			}
 			break;

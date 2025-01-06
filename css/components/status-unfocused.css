@@ -1,0 +1,7 @@
+article:not(#avatar) {
+	font-size: smaller;
+}
+
+#account-info, main {
+	opacity: 0.8;
+}

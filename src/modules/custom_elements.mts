@@ -9,6 +9,7 @@ let materialIcons: CSSStyleSheet;
 let commonStylesheet: CSSStyleSheet;
 let profileHeaderStylesheet: CSSStyleSheet;
 let statusStylesheet: CSSStyleSheet;
+let statusUnfocusedStylesheet: CSSStyleSheet;
 let linkCardStylesheet: CSSStyleSheet;
 let postBoxStylesheet: CSSStyleSheet;
 let modalStylesheet: CSSStyleSheet;
@@ -483,11 +484,6 @@ export class Status extends Card {
 
 		this.content.setContent(renderEmojis(status.content, status.emojis));
 
-		if(this.isUnfocused) {
-			this.header.style.fontSize = "0.9em";
-			this.content.style.fontSize = "0.9em";
-		}
-
 		if(status.mediaAttachments.length > 0 && !this.isUnfocused) {
 			this.content.setAttachments(renderAttachments(status.mediaAttachments));
 		}
@@ -589,6 +585,8 @@ export class Status extends Card {
 					});
 				}, 50);
 			});
+		} else {
+			shadow.adoptedStyleSheets.push(statusUnfocusedStylesheet);
 		}
 
 		if(this.isReblog) {
@@ -599,9 +597,12 @@ export class Status extends Card {
 
 		// keeping this disabled until I find a way to not have this override all other elements within the status
 		
-		// this.content.addEventListener("click", (event) => {
-		// 	this.events.onStatusClick(this.status.id);
-		// });
+		this.content.addEventListener("click", (event) => {
+			const clickedElementTagName = (event.target as HTMLElement).tagName;
+			if(clickedElementTagName != "A" && clickedElementTagName != "SUMMARY") {
+				this.events.onStatusClick(this.status.id);
+			}
+		});
 	}
 }
 
@@ -1408,6 +1409,29 @@ export class AccountView extends HTMLElement {
 	}
 }
 
+export class StatusView extends HTMLElement {
+	instanceUrl: URL;
+	id: string;
+
+	statusEvents: StatusEvents;
+
+	status: mastodon.Status;
+
+	statusElement: Status;
+
+	constructor(instanceUrl: URL, status: mastodon.Status, statusEvents?: StatusEvents) {
+		super();
+		this.instanceUrl = instanceUrl;
+		this.status = status;
+		this.statusEvents = statusEvents;
+	}
+
+	connectedCallback() {
+		this.statusElement = new Status(this.instanceUrl, this.status, this.statusEvents);
+		this.appendChild(this.statusElement);
+	}
+}
+
 export class ModalSettingsView extends HTMLElement {
 	instanceUrlInput: HTMLInputElement;
 
@@ -1465,6 +1489,7 @@ async function initStylesheets() {
 	commonStylesheet = await getStylesheet("/css/components/common.css");
 	profileHeaderStylesheet = await getStylesheet("/css/components/profile-header.css");
 	statusStylesheet = await getStylesheet("/css/components/status.css");
+	statusUnfocusedStylesheet = await getStylesheet("/css/components/status-unfocused.css");
 	linkCardStylesheet = await getStylesheet("/css/components/link-card.css");
 	postBoxStylesheet = await getStylesheet("/css/components/post-box.css");
 	modalStylesheet = await getStylesheet("/css/components/modal.css");
@@ -1501,6 +1526,7 @@ function initComponents() {
 			customElements.define("app-view-public", PublicTimelineView);
 			customElements.define("app-view-local", LocalTimelineView);
 			customElements.define("app-view-account", AccountView);
+			customElements.define("app-view-status", StatusView);
 
 			customElements.define("app-modal-view-settings", ModalSettingsView);
 		});
