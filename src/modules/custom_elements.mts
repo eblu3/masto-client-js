@@ -264,7 +264,7 @@ export class StatusFooter extends HTMLElement {
 
 	connectReplyButton(target: HTMLElement) {
 		this.#replyButton.addEventListener("click", (event) => {
-			const replyBox = new ReplyBox(env.instanceUrl); // TODO: make this un-hardcoded
+			const replyBox = new ReplyBox(env.instanceUrl, this.#statusId); // TODO: make this un-hardcoded
 			replyBox.setReplyingToId(this.#statusId);
 			target.after(replyBox);
 		})
@@ -484,7 +484,7 @@ export class Status extends Card {
 
 		this.content.setContent(renderEmojis(status.content, status.emojis));
 
-		if(status.mediaAttachments.length > 0 && !this.isUnfocused) {
+		if(status.mediaAttachments.length > 0) {
 			this.content.setAttachments(renderAttachments(status.mediaAttachments));
 		}
 
@@ -595,11 +595,20 @@ export class Status extends Card {
 			this.setStatus(this.status);
 		}
 
-		// keeping this disabled until I find a way to not have this override all other elements within the status
-		
-		this.content.addEventListener("click", (event) => {
+		this.shadowRoot.addEventListener("click", (event) => {
+			// clicking on these means that you probably don't want to go to the status page
+			const ignoredTags = ["A", "SUMMARY", "IMG", "VIDEO", "BUTTON"];
 			const clickedElementTagName = (event.target as HTMLElement).tagName;
-			if(clickedElementTagName != "A" && clickedElementTagName != "SUMMARY") {
+
+			let ignoreEvent = false;
+
+			for(const tagName of ignoredTags) {
+				if(clickedElementTagName == tagName) {
+					ignoreEvent = true;
+				}
+			}
+
+			if(!ignoreEvent) {
 				this.events.onStatusClick(this.status.id);
 			}
 		});
@@ -1205,10 +1214,11 @@ export class ReplyBox extends PostBox {
 	
 	#replyId: string;
 	
-	constructor(instanceUrl: URL) {
+	constructor(instanceUrl: URL, replyId: string) {
 		super();
 
 		this.instanceUrl = instanceUrl;
+		this.#replyId = replyId;
 	}
 
 	post() {
@@ -1429,6 +1439,19 @@ export class StatusView extends HTMLElement {
 	connectedCallback() {
 		this.statusElement = new Status(this.instanceUrl, this.status, this.statusEvents);
 		this.appendChild(this.statusElement);
+		this.appendChild(new ReplyBox(this.instanceUrl, this.status.id));
+
+		mastodon.statuses.getStatusContext(this.instanceUrl, this.status.id, env.token).then((context) => {
+			for(const status of context.ancestors) {
+				this.insertBefore(new Status(this.instanceUrl, status, this.statusEvents, true), this.statusElement);
+			}
+
+			for(const status of context.descendants) {
+				this.appendChild(new Status(this.instanceUrl, status, this.statusEvents, true));
+			}
+
+			this.statusElement.scrollIntoView({block: "center"});
+		});
 	}
 }
 

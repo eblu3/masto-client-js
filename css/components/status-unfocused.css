@@ -1,4 +1,4 @@
-article:not(#avatar) {
+article:not(#avatar):not(img):not(video) {
 	font-size: smaller;
 }
 
