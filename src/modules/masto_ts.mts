@@ -1,6 +1,6 @@
 import * as env from "../env.mjs";
 import * as mastodon from "./mastodon/mastodon.mjs";
-import * as customElements from "./custom_elements.mjs";
+import * as customElements from "./customElements/customElements.mjs";
 import { Timelines } from "./mastodon/mastodon.mjs";
 
 export const instanceUrl: URL = env.instanceUrl;

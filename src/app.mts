@@ -1,7 +1,8 @@
 import * as env from "./env.mjs";
 import * as mastodon from "./modules/mastodon/mastodon.mjs";
 import * as oEmbed from "./modules/oembed/oembed.mjs";
-import * as customElements from "./modules/custom_elements.mjs";
+import * as customElements from "./modules/customElements/customElements.mjs";
+import * as viewsMjs from "./modules/customElements/views.mjs";
 import { getAccountIdFromHandle } from "./modules/masto_ts.mjs";
 
 interface ViewObject {
@@ -56,7 +57,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 	switch(data.name) {
 		case "home":
 			currentState = data;
-			currentView = new customElements.HomeView(instanceUrl, {
+			currentView = new viewsMjs.HomeView(instanceUrl, {
 				onStatusClick: (id: string) => {
 					switchView({name: "status", id: id});
 				},
@@ -71,7 +72,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			break;
 		case "public":
 			currentState = data;
-			currentView = new customElements.PublicTimelineView(instanceUrl);
+			currentView = new viewsMjs.PublicTimelineView(instanceUrl);
 			viewTarget.appendChild(currentView);
 			if(!isPoppingState) {
 				history.pushState(data, "", "/public");
@@ -79,7 +80,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			break;
 		case "local":
 			currentState = data;
-			currentView = new customElements.LocalTimelineView(instanceUrl);
+			currentView = new viewsMjs.LocalTimelineView(instanceUrl);
 			viewTarget.appendChild(currentView);
 			if(!isPoppingState) {
 				history.pushState(data, "", "/local");
@@ -87,21 +88,21 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			break;
 		case "account":
 			currentState = data;
-			currentView = new customElements.AccountView(instanceUrl);
+			currentView = new viewsMjs.AccountView(instanceUrl);
 			viewTarget.appendChild(currentView);
-			(currentView as customElements.AccountView).accountTimeline.setAttribute("type", "account");
+			(currentView as customElements.views.AccountView).accountTimeline.setAttribute("type", "account");
 			if(data.acct) {
 				mastodon.accounts.lookupUsername(instanceUrl, data.acct).then((account) => {
-					(currentView as customElements.AccountView).profileHeader.setAccount(account);
+					(currentView as customElements.views.AccountView).profileHeader.setAccount(account);
 				});
 				getAccountIdFromHandle(instanceUrl, data.acct).then((id) => {
-					(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", id);
+					(currentView as customElements.views.AccountView).accountTimeline.setAttribute("acctid", id);
 				});
 			} else {
 				mastodon.accounts.get(instanceUrl, data.id, token).then((account) => {
-					(currentView as customElements.AccountView).profileHeader.setAccount(account);
+					(currentView as customElements.views.AccountView).profileHeader.setAccount(account);
 				});
-				(currentView as customElements.AccountView).accountTimeline.setAttribute("acctid", data.id);
+				(currentView as customElements.views.AccountView).accountTimeline.setAttribute("acctid", data.id);
 			}
 			if(!isPoppingState) {
 				if(data.acct) {
@@ -115,7 +116,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			currentState = data;
 			if(data.id && !data.status) {
 				mastodon.statuses.getStatus(instanceUrl, data.id, token).then((status) => {
-					currentView = new customElements.StatusView(instanceUrl, status, {
+					currentView = new viewsMjs.StatusView(instanceUrl, status, {
 						onStatusClick: (id: string) => {
 							switchView({name: "status", id: id});
 						},
@@ -126,7 +127,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 					viewTarget.appendChild(currentView);
 				});
 			} else if(data.status) {
-				currentView = new customElements.StatusView(instanceUrl, data.status, {
+				currentView = new viewsMjs.StatusView(instanceUrl, data.status, {
 					onStatusClick: (id: string) => {
 						switchView({name: "status", id: id});
 					},
@@ -152,16 +153,16 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 function switchModalView(data: ModalObject) {
 	switch(data.name) {
 		case "settings":
-			showModal(new customElements.ModalSettingsView()).then(() => {
+			showModal(new viewsMjs.ModalSettingsView()).then(() => {
 				modalContent.shadowRoot.getElementById("btn-set-instance-url").addEventListener("click", (event) => {
-					instanceUrl = new URL((modalContent as customElements.ModalSettingsView).instanceUrlInput.value);
-					localStorage.setItem("instanceUrl", (modalContent as customElements.ModalSettingsView).instanceUrlInput.value);
+					instanceUrl = new URL((modalContent as customElements.views.ModalSettingsView).instanceUrlInput.value);
+					localStorage.setItem("instanceUrl", (modalContent as customElements.views.ModalSettingsView).instanceUrlInput.value);
 					switchView(currentState);
 				});
 				modalContent.shadowRoot.getElementById("btn-remove-instance-url").addEventListener("click", (event) => {
 					instanceUrl = env.instanceUrl;
 					localStorage.removeItem("instanceUrl");
-					(modalContent as customElements.ModalSettingsView).instanceUrlInput.value = "";
+					(modalContent as customElements.views.ModalSettingsView).instanceUrlInput.value = "";
 					switchView(currentState);
 				});
 			});
