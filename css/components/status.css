@@ -73,6 +73,8 @@ address {
 
 #display-name {
 	font-size: 1.25em;
+
+	pointer-events: none;
 }
 
 main {

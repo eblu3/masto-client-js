@@ -23,6 +23,8 @@ const tagInputTemplate = await util.getTemplate("/templates/post.html", "taginpu
 export class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
 
+	account: mastodon.Account;
+
 	#container: HTMLElement;
 	#avatar: HTMLImageElement;
 	#displayName: HTMLHeadingElement;
@@ -30,11 +32,17 @@ export class ProfileHeader extends HTMLElement {
 	#bio: HTMLParagraphElement;
 	#fields: HTMLTableElement;
 	
-	constructor() {
+	constructor(account: mastodon.Account) {
 		super();
+
+		this.account = account;
 	}
 
 	setAccount(account: mastodon.Account) {
+		if(account != this.account) {
+			this.account = account;
+		}
+		
 		this.#container.style.setProperty("--header-url", `url(${account.header.href})`);
 		this.#avatar.src = account.avatar.href;
 		this.#displayName.innerHTML = (account.displayName || account.displayName != "") ? renderEmojis(account.displayName, account.emojis) as string : account.username;
@@ -68,6 +76,8 @@ export class ProfileHeader extends HTMLElement {
 		this.#handle = shadow.getElementById("handle") as HTMLParagraphElement;
 		this.#bio = shadow.getElementById("bio") as HTMLParagraphElement;
 		this.#fields = shadow.getElementById("fields") as HTMLTableElement;
+
+		this.setAccount(this.account);
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {

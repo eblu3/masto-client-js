@@ -91,21 +91,16 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			break;
 		case "account":
 			currentState = data;
-			currentView = new cstmElements.views.AccountView(instanceUrl);
-			viewTarget.appendChild(currentView);
-			(currentView as cstmElements.views.AccountView).accountTimeline.setAttribute("type", "account");
 			if(data.acct) {
 				mastodon.accounts.lookupUsername(instanceUrl, data.acct).then((account) => {
-					(currentView as cstmElements.views.AccountView).profileHeader.setAccount(account);
-				});
-				getAccountIdFromHandle(instanceUrl, data.acct).then((id) => {
-					(currentView as cstmElements.views.AccountView).accountTimeline.setAttribute("acctid", id);
+					currentView = new cstmElements.views.AccountView(instanceUrl, account, token, statusEvents);
+					viewTarget.appendChild(currentView);
 				});
 			} else {
 				mastodon.accounts.get(instanceUrl, data.id, token).then((account) => {
-					(currentView as cstmElements.views.AccountView).profileHeader.setAccount(account);
+					currentView = new cstmElements.views.AccountView(instanceUrl, account, token, statusEvents);
+					viewTarget.appendChild(currentView);
 				});
-				(currentView as cstmElements.views.AccountView).accountTimeline.setAttribute("acctid", data.id);
 			}
 			if(!isPoppingState) {
 				if(data.acct) {

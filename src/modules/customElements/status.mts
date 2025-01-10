@@ -78,7 +78,7 @@ export class StatusHeader extends HTMLElement {
 		this.profileLink = this.querySelector("#profile-link") as HTMLAnchorElement;
 		this.#postTime = this.querySelector("#time") as HTMLTimeElement;
 
-		if (!this.displayMenuButton) {
+		if(!this.displayMenuButton) {
 			this.menuButton.remove();
 		}
 	}
@@ -106,7 +106,7 @@ export class StatusFooter extends HTMLElement {
 		this.#ableToBoost = able;
 		this.#boostButton.disabled = !able;
 
-		if (able) {
+		if(able) {
 			this.#boostButton.title = "Boost";
 			this.#boostButton.ariaLabel = "Boost";
 		} else {
@@ -117,7 +117,7 @@ export class StatusFooter extends HTMLElement {
 
 	setBoosted(boosted: boolean) {
 		this.#boosted = boosted;
-		if (boosted) {
+		if(boosted) {
 			this.#boostButton.style.color = "var(--accent-color)";
 			this.#boostButton.style.fontVariationSettings = `'FILL' 100`;
 		} else {
@@ -128,7 +128,7 @@ export class StatusFooter extends HTMLElement {
 
 	setFaved(faved: boolean) {
 		this.#faved = faved;
-		if (faved) {
+		if(faved) {
 			this.#favoriteButton.style.color = "var(--favorite-color)";
 			this.#favoriteButton.style.fontVariationSettings = `'FILL' 100`;
 		} else {
@@ -139,13 +139,13 @@ export class StatusFooter extends HTMLElement {
 
 	setStatusInfo(id: string, ableToBoost?: boolean, boosted?: boolean, favorited?: boolean) {
 		this.setStatusId(id);
-		if (ableToBoost != undefined) {
+		if(ableToBoost != undefined) {
 			this.setAbleToBoost(ableToBoost);
 		}
-		if (boosted != undefined) {
+		if(boosted != undefined) {
 			this.setBoosted(boosted);
 		}
-		if (favorited != undefined) {
+		if(favorited != undefined) {
 			this.setFaved(favorited);
 		}
 	}
@@ -166,8 +166,8 @@ export class StatusFooter extends HTMLElement {
 		this.#favoriteButton = this.querySelector("#favorite-button") as HTMLButtonElement;
 
 		this.#boostButton.addEventListener("click", (event) => {
-			if (this.#statusId) {
-				if (this.#boosted) {
+			if(this.#statusId) {
+				if(this.#boosted) {
 					mastodon.statuses.unboostStatus(env.instanceUrl, env.token, this.#statusId).then(() => this.setBoosted(false));
 				} else {
 					mastodon.statuses.boostStatus(env.instanceUrl, env.token, this.#statusId).then((status) => {
@@ -178,8 +178,8 @@ export class StatusFooter extends HTMLElement {
 		});
 
 		this.#favoriteButton.addEventListener("click", (event) => {
-			if (this.#statusId) {
-				if (this.#faved) {
+			if(this.#statusId) {
+				if(this.#faved) {
 					mastodon.statuses.unfavouriteStatus(env.instanceUrl, env.token, this.#statusId).then(() => this.setFaved(false));
 				} else {
 					mastodon.statuses.favouriteStatus(env.instanceUrl, env.token, this.#statusId).then((status) => {
@@ -201,8 +201,8 @@ export class StatusContent extends HTMLElement {
 	}
 
 	setContent(content: string | DocumentFragment) {
-		if (this.postContent) {
-			if (typeof content == "string") {
+		if(this.postContent) {
+			if(typeof content == "string") {
 			} else {
 				this.postContent.appendChild(content);
 			}
@@ -212,15 +212,15 @@ export class StatusContent extends HTMLElement {
 	}
 
 	setAttachments(attachments: HTMLElement[]) {
-		for (const attachment of attachments) {
+		for(const attachment of attachments) {
 			this.attachmentContainer.appendChild(attachment);
 		}
 	}
 
 	addCard(linkUrl?: URL, title?: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
-		if (this.#card) {
+		if(this.#card) {
 			console.warn("card already exists");
-		} else if (linkUrl && title && (imageUrl || description)) {
+		} else if(linkUrl && title && (imageUrl || description)) {
 			const card = new LinkCard;
 			this.querySelector("#post-content").appendChild(card);
 			this.#card = card;
@@ -230,7 +230,7 @@ export class StatusContent extends HTMLElement {
 	}
 
 	removeCard() {
-		if (this.#card) {
+		if(this.#card) {
 			this.#card.remove();
 			this.#card = undefined;
 		} else {
@@ -305,12 +305,12 @@ export class Status extends HTMLElement {
 
 		this.id = `status-${status.id}`;
 
-		if (this.isReblog) {
+		if(this.isReblog) {
 			this.header.setLabel(`<a href="/user/?acct=@${this.status.account.acct}"><span class="material-symbols-outlined">repeat</span> <img class="avatar inline-img" src="${this.status.account.avatar}" alt=""> <span class="display-name">${(this.status.account.displayName || this.status.account.displayName != "") ? renderEmojis(this.status.account.displayName, this.status.account.emojis) : this.status.account.username}</span> boosted</a>`);
-		} else if (this.status.inReplyToId) {
-			// mastodon.accounts.getAccount(this.instanceUrl, status.inReplyToAccountId, env.token).then((repliedToAccount) => {
-			// 	this.header.setLabel(`<span class="material-symbols-outlined">reply</span> in reply to <img class="avatar inline-img" src="${repliedToAccount.avatar}" alt=""> <span class="display-name">${(repliedToAccount.displayName || repliedToAccount.displayName != "") ? renderEmojis(repliedToAccount.displayName, repliedToAccount.emojis) : repliedToAccount.username}</span>`);
-			// });
+		} else if(this.status.inReplyToId) {
+			mastodon.accounts.get(this.instanceUrl, status.inReplyToAccountId, env.token).then((repliedToAccount) => {
+				this.header.setLabel(`<span class="material-symbols-outlined">reply</span> in reply to <img class="avatar inline-img" src="${repliedToAccount.avatar}" alt=""> <span class="display-name">${(repliedToAccount.displayName || repliedToAccount.displayName != "") ? renderEmojis(repliedToAccount.displayName, repliedToAccount.emojis) : repliedToAccount.username}</span>`);
+			});
 		}
 
 		let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) as string : status.account.username;
@@ -330,7 +330,7 @@ export class Status extends HTMLElement {
 			this.events.onProfileLinkClick(status.account.acct);
 		});
 
-		if (!this.isUnfocused) {
+		if(!this.isUnfocused) {
 			this.footer.setStatusInfo(
 				status.id,
 				(status.visibility != mastodon.StatusVisibility.Private && status.visibility != mastodon.StatusVisibility.Direct),
@@ -340,15 +340,15 @@ export class Status extends HTMLElement {
 			this.footer.connectReplyButton(this);
 		}
 
-		if (status.language) {
+		if(status.language) {
 			this.setAttribute("lang", status.language.language);
-		} else if (this.hasAttribute("lang")) {
+		} else if(this.hasAttribute("lang")) {
 			this.removeAttribute("lang");
 		}
 
-		if (status.sensitive || status.spoilerText != "") {
-			if (!(this.content instanceof StatusContentWarned)) {
-				if (this.content) {
+		if(status.sensitive || status.spoilerText != "") {
+			if(!(this.content instanceof StatusContentWarned)) {
+				if(this.content) {
 					this.content.remove();
 				}
 
@@ -356,11 +356,11 @@ export class Status extends HTMLElement {
 				this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 			}
 
-			if (status.spoilerText != "") {
+			if(status.spoilerText != "") {
 				(this.content as StatusContentWarned).setContentWarning(`⚠️ ${status.spoilerText}`);
 			}
 		} else {
-			if (this.content && this.content instanceof StatusContentWarned) {
+			if(this.content && this.content instanceof StatusContentWarned) {
 				this.content.remove();
 			}
 
@@ -371,19 +371,19 @@ export class Status extends HTMLElement {
 
 		this.content.setContent(renderEmojis(status.content, status.emojis));
 
-		if (status.mediaAttachments.length > 0) {
+		if(status.mediaAttachments.length > 0) {
 			this.content.setAttachments(renderAttachments(status.mediaAttachments));
 		}
 
-		if (status.card != null && !this.isUnfocused) {
+		if(status.card != null && !this.isUnfocused) {
 			oEmbed.getoEmbed(status.card.url, undefined, 512, "json").then((response) => {
-				if (response) {
+				if(response) {
 					console.log(response);
-					if (response instanceof oEmbed.VideoResponse || response instanceof oEmbed.RichResponse) {
+					if(response instanceof oEmbed.VideoResponse || response instanceof oEmbed.RichResponse) {
 						let iframe: HTMLIFrameElement;
 
 						// we add an exception for tumblr posts here since they do a thing where they return a script that then *loads* the tumblr post
-						if (response.html.body.getElementsByTagName("iframe").length > 0 || response.html.body.querySelector(".tumblr-post")) {
+						if(response.html.body.getElementsByTagName("iframe").length > 0 || response.html.body.querySelector(".tumblr-post")) {
 							iframe = response.html.body.getElementsByTagName("iframe").item(0);
 						} else {
 							iframe = document.createElement("iframe");
@@ -402,7 +402,7 @@ export class Status extends HTMLElement {
 					this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
 				}
 			});
-		} else if (this.content.getElementsByTagName("app-link-card").length > 0) {
+		} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
 			this.content.removeCard();
 		}
 	}
@@ -418,7 +418,7 @@ export class Status extends HTMLElement {
 
 		this.header = header;
 
-		if (!this.isUnfocused) {
+		if(!this.isUnfocused) {
 			const footer = new StatusFooter;
 
 			shadow.getElementById("status-root").appendChild(footer);
@@ -430,7 +430,7 @@ export class Status extends HTMLElement {
 				let localUrl: URL;
 				let remoteUrl: URL;
 
-				if (this.isReblog) {
+				if(this.isReblog) {
 					localUrl = new URL(`/@${this.status.reblog.account.acct}/${this.status.reblog.id}`, this.instanceUrl);
 					remoteUrl = this.status.reblog.url;
 				} else {
@@ -456,7 +456,7 @@ export class Status extends HTMLElement {
 					}
 				]);
 				const viewTarget = document.getElementById("view-target");
-				if (viewTarget) {
+				if(viewTarget) {
 					menu.style.top = `${this.header.menuButton.offsetTop - viewTarget.scrollTop}px`;
 					menu.style.left = `${this.header.menuButton.offsetLeft - viewTarget.scrollLeft}px`;
 				} else {
@@ -476,7 +476,7 @@ export class Status extends HTMLElement {
 			shadow.adoptedStyleSheets.push(statusUnfocusedStylesheet);
 		}
 
-		if (this.isReblog) {
+		if(this.isReblog) {
 			this.setStatus(this.status.reblog);
 		} else {
 			this.setStatus(this.status);
@@ -487,15 +487,17 @@ export class Status extends HTMLElement {
 			const ignoredTags = ["A", "SUMMARY", "IMG", "VIDEO", "BUTTON", "APP-LINK-CARD"];
 			const clickedElementTagName = (event.target as HTMLElement).tagName;
 
+			console.log(clickedElementTagName);
+
 			let ignoreEvent = false;
 
-			for (const tagName of ignoredTags) {
-				if (clickedElementTagName == tagName) {
+			for(const tagName of ignoredTags) {
+				if(clickedElementTagName == tagName) {
 					ignoreEvent = true;
 				}
 			}
 
-			if (!ignoreEvent) {
+			if(!ignoreEvent) {
 				this.events.onStatusClick(this.status.id);
 			}
 		});
@@ -510,11 +512,7 @@ export class StatusThread extends Status {
 		status: mastodon.Status,
 		events?: util.StatusEvents
 	) {
-		super(
-			instanceUrl,
-			status,
-			events
-		);
+		super(instanceUrl, status, events);
 
 		this.template = statusThreadTemplate;
 	}
@@ -525,10 +523,10 @@ export class StatusThread extends Status {
 		super.setStatus(status);
 
 		mastodon.statuses.getStatusContext(this.instanceUrl, this.rootStatus.id, env.token).then((context) => {
-			if (context.ancestors.length > 0) {
-				const firstStatus = new Status(this.instanceUrl, context.ancestors[0], undefined, true);
+			if(context.ancestors.length > 0) {
+				const firstStatus = new Status(this.instanceUrl, context.ancestors[0], this.events, true);
 				this.shadowRoot.getElementById("before-root-status").appendChild(firstStatus);
-				if (context.ancestors.length > 1) {
+				if(context.ancestors.length > 1) {
 					this.shadowRoot.insertBefore(new Text(`+${context.ancestors.length - 1} more`), this.shadowRoot.getElementById("status-root"));
 				}
 			}
@@ -572,10 +570,10 @@ export class LinkCard extends HTMLElement {
 	setAll(linkUrl: URL, title: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
 		this.setLink(linkUrl);
 		this.setTitle(title);
-		if (imageUrl) {
+		if(imageUrl) {
 			this.setImage(imageUrl, imageWidth, imageHeight);
 		}
-		if (description) {
+		if(description) {
 			this.setDescription(description);
 		}
 	}

@@ -76,24 +76,27 @@ export class LocalTimelineView extends TimelineView {
 	}
 }
 
-export class AccountView extends HTMLElement {
-	instanceUrl: URL;
-
+export class AccountView extends TimelineView {
+	account: mastodon.Account;
+	
 	profileHeader: ProfileHeader;
-	accountTimeline: Timeline;
 
-	constructor(instanceUrl: URL) {
-		super();
+	constructor(instanceUrl: URL, account: mastodon.Account, token?: string, statusEvents?: util.StatusEvents) {
+		super(instanceUrl, token, statusEvents);
 
-		this.instanceUrl = instanceUrl;
+		this.account = account;
 	}
 
 	connectedCallback() {
-		this.profileHeader = new ProfileHeader();
-		this.accountTimeline = new Timeline(this.instanceUrl);
+		super.connectedCallback();
+
+		this.profileHeader = new ProfileHeader(this.account);
+
+		this.timeline.setAttribute("type", "account");
+		this.timeline.setAttribute("acctid", this.account.id);
 
 		this.appendChild(this.profileHeader);
-		this.appendChild(this.accountTimeline);
+		this.appendChild(this.timeline);
 	}
 }
 
