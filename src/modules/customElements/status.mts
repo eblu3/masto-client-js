@@ -196,14 +196,28 @@ export class StatusContent extends HTMLElement {
 	attachmentContainer: HTMLDivElement;
 	#card: LinkCard;
 
-	constructor() {
+	events: util.StatusEvents;
+
+	constructor(statusEvents?: util.StatusEvents) {
 		super();
+
+		this.events = statusEvents;
 	}
 
 	setContent(content: string | DocumentFragment) {
 		if(this.postContent) {
 			if(typeof content == "string") {
 			} else {
+				if(this.events.onProfileLinkClick) {
+					content.querySelectorAll("a.mention:not(.hashtag)").forEach((mention) => {
+						mastodon.accounts.search(env.instanceUrl, env.token, (mention as HTMLAnchorElement).href, undefined, undefined, true).then((accounts) => {
+							mention.addEventListener("click", (event) => {
+								event.preventDefault();
+								this.events.onProfileLinkClick(accounts[0].acct);
+							});
+						});
+					});
+				}
 				this.postContent.appendChild(content);
 			}
 		} else {
@@ -249,8 +263,8 @@ export class StatusContent extends HTMLElement {
 export class StatusContentWarned extends StatusContent {
 	#contentWarning: HTMLElement;
 
-	constructor() {
-		super();
+	constructor(statusEvents?: util.StatusEvents) {
+		super(statusEvents);
 	}
 
 	setContentWarning(cw: string) {
@@ -352,7 +366,7 @@ export class Status extends HTMLElement {
 					this.content.remove();
 				}
 
-				this.content = new StatusContentWarned;
+				this.content = new StatusContentWarned(this.events);
 				this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 			}
 
@@ -364,7 +378,7 @@ export class Status extends HTMLElement {
 				this.content.remove();
 			}
 
-			this.content = new StatusContent;
+			this.content = new StatusContent(this.events);
 			this.content.slot = "content";
 			this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
 		}
