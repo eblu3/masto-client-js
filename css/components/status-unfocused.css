@@ -5,3 +5,7 @@ article:not(#avatar):not(img):not(video) {
 #account-info, main {
 	opacity: 0.8;
 }
+
+#post-attachments {
+	max-height: 30vh;
+}

@@ -1,62 +1,24 @@
 import * as mastodon from "../mastodon/mastodon.mjs";
-import * as oEmbed from "../oembed/oembed.mjs";
-import {getRelativeTimeString, renderEmojis, renderAttachments, parseHandle, charLimit} from "../masto_ts.mjs";
-import { token } from "../../env.mjs";
+import {renderEmojis, charLimit} from "../masto_ts.mjs";
 import * as env from "../../env.mjs";
+import * as statusElements from "./status.mjs";
+import * as viewElements from "./views.mjs";
+import * as util from "./util.mjs";
 
-import * as views from "./views.mjs";
-
+export { MenuCategory, MenuItem, StatusEvents } from "./util.mjs";
+export * as status from "./status.mjs";
 export * as views from "./views.mjs";
 
-let materialIcons: CSSStyleSheet;
+const profileHeaderStylesheet = await util.getStylesheet("/css/components/profile-header.css");
+const postBoxStylesheet = await util.getStylesheet("/css/components/post-box.css");
+const modalStylesheet = await util.getStylesheet("/css/components/modal.css");
+const menuStylesheet = await util.getStylesheet("/css/components/menu.css");
 
-let commonStylesheet: CSSStyleSheet;
-let profileHeaderStylesheet: CSSStyleSheet;
-let statusStylesheet: CSSStyleSheet;
-let statusUnfocusedStylesheet: CSSStyleSheet;
-let linkCardStylesheet: CSSStyleSheet;
-let postBoxStylesheet: CSSStyleSheet;
-let modalStylesheet: CSSStyleSheet;
-let menuStylesheet: CSSStyleSheet;
-
-let profileHeaderTemplate: DocumentFragment;
-let cardTemplate: DocumentFragment;
-let statusHeaderTemplate: DocumentFragment;
-let statusFooterTemplate: DocumentFragment;
-let statusContentTemplate: DocumentFragment;
-let statusContentWarnedTemplate: DocumentFragment;
-let statusTemplate: DocumentFragment;
-let statusThreadTemplate: DocumentFragment;
-let linkCardTemplate: DocumentFragment;
-let timelineTemplate: DocumentFragment;
-let postBoxTemplate: DocumentFragment;
-let tagInputTemplate: DocumentFragment;
-export let settingsModalTemplate: DocumentFragment;
-
-let postSentEvent: CustomEvent;
-
-interface MenuCategory {
-	categoryName: string;
-	contents: MenuItem[];
-}
-
-interface MenuItem {
-	name: string;
-	onClick: () => void;
-	icon?: string | URL;
-	iconOptions?: {option: string, value: string}[];
-}
-
-export interface StatusEvents {
-	onStatusClick?: (id: string) => void;
-	onProfileLinkClick?: (acct: string) => void;
-}
-
-function clickOutsideHandler(event: Event, elementToDetect: HTMLElement) {
-	if(event.target != elementToDetect) {
-		elementToDetect.remove();
-	}
-}
+const profileHeaderTemplate = await util.getTemplate("/templates/profile.html", "header");
+const cardTemplate = await util.getTemplate("/templates/card.html", "card");
+const timelineTemplate = await util.getTemplate("/templates/timeline.html", "timeline");
+const postBoxTemplate = await util.getTemplate("/templates/post.html", "postbox");
+const tagInputTemplate = await util.getTemplate("/templates/post.html", "taginput");
 
 export class ProfileHeader extends HTMLElement {
 	static observedAttributes = ["acctid", "acct"];
@@ -97,7 +59,7 @@ export class ProfileHeader extends HTMLElement {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, profileHeaderStylesheet];
+		shadow.adoptedStyleSheets = [util.commonStylesheet, profileHeaderStylesheet];
 		shadow.appendChild(profileHeaderTemplate.cloneNode(true));
 
 		this.#container = shadow.getElementById("container");
@@ -128,585 +90,8 @@ export class Card extends HTMLElement {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.adoptedStyleSheets = [util.commonStylesheet];
 		shadow.appendChild(cardTemplate.cloneNode(true));
-	}
-}
-
-export class StatusHeader extends HTMLElement {
-	menuButton: HTMLButtonElement;
-	displayMenuButton: boolean;
-	
-	#label: HTMLParagraphElement;
-	#avatar: HTMLImageElement;
-	#displayName: HTMLSpanElement;
-	#handle: HTMLSpanElement;
-	profileLink: HTMLAnchorElement;
-	#postTime: HTMLTimeElement;
-
-	constructor(displayMenuButton?: boolean) {
-		super();
-
-		displayMenuButton != undefined ? this.displayMenuButton = displayMenuButton : this.displayMenuButton = false;
-	}
-
-	setLabel(text: string) {
-		this.#label.innerHTML = text;
-	}
-
-	setAvatar(url: URL) {
-		this.#avatar.src = url.href;
-	}
-
-	setDisplayName(name: string) {
-		this.#displayName.innerHTML = name;
-	}
-
-	setHandle(acct: string) {
-		this.#handle.innerText = acct;
-	}
-
-	setProfileLink(url: URL) {
-		this.profileLink.href = url.href;
-	}
-
-	setTime(time: Date) {
-		this.#postTime.dateTime = time.toISOString();
-		this.#postTime.innerText = getRelativeTimeString(time);
-	}
-
-	setProfileInfo(avatarUrl: URL, displayName: string, handle: string, profileLink: URL) {
-		this.setAvatar(avatarUrl);
-		this.setDisplayName(displayName);
-		this.setHandle(handle);
-		this.setProfileLink(profileLink);
-	}
-
-	connectedCallback() {
-		this.appendChild(statusHeaderTemplate.cloneNode(true));
-
-		this.menuButton = this.querySelector("#menu-button") as HTMLButtonElement;
-
-		this.#label = this.querySelector("#label") as HTMLParagraphElement;
-		this.#avatar = this.querySelector("#avatar") as HTMLImageElement;
-		this.#displayName = this.querySelector("#display-name");
-		this.#handle = this.querySelector("#acct");
-		this.profileLink = this.querySelector("#profile-link") as HTMLAnchorElement;
-		this.#postTime = this.querySelector("#time") as HTMLTimeElement;
-
-		if(!this.displayMenuButton) {
-			this.menuButton.remove();
-		}
-	}
-}
-
-export class StatusFooter extends HTMLElement {
-	#replyButton: HTMLButtonElement;
-	#boostButton: HTMLButtonElement;
-	#favoriteButton: HTMLButtonElement;
-
-	#statusId: string;
-	#ableToBoost: boolean;
-	#boosted: boolean;
-	#faved: boolean;
-	
-	constructor() {
-		super();
-	}
-
-	setStatusId(id: string) {
-		this.#statusId = id;
-	}
-
-	setAbleToBoost(able: boolean) {
-		this.#ableToBoost = able;
-		this.#boostButton.disabled = !able;
-
-		if(able) {
-			this.#boostButton.title = "Boost";
-			this.#boostButton.ariaLabel = "Boost";
-		} else {
-			this.#boostButton.title = "Cannot boost this post.";
-			this.#boostButton.ariaLabel = "Cannot boost this post.";
-		}
-	}
-
-	setBoosted(boosted: boolean) {
-		this.#boosted = boosted;
-		if(boosted) {
-			this.#boostButton.style.color = "var(--accent-color)";
-			this.#boostButton.style.fontVariationSettings = `'FILL' 100`;
-		} else {
-			this.#boostButton.style.color = "";
-			this.#boostButton.style.fontVariationSettings = `'FILL' 0`;
-		}
-	}
-
-	setFaved(faved: boolean) {
-		this.#faved = faved;
-		if(faved) {
-			this.#favoriteButton.style.color = "var(--favorite-color)";
-			this.#favoriteButton.style.fontVariationSettings = `'FILL' 100`;
-		} else {
-			this.#favoriteButton.style.color = "";
-			this.#favoriteButton.style.fontVariationSettings = `'FILL' 0`;
-		}
-	}
-
-	setStatusInfo(id: string, ableToBoost?: boolean, boosted?: boolean, favorited?: boolean) {
-		this.setStatusId(id);
-		if(ableToBoost != undefined) {
-			this.setAbleToBoost(ableToBoost);
-		}
-		if(boosted != undefined) {
-			this.setBoosted(boosted);
-		}
-		if(favorited != undefined) {
-			this.setFaved(favorited);
-		}
-	}
-
-	connectReplyButton(target: HTMLElement) {
-		this.#replyButton.addEventListener("click", (event) => {
-			const replyBox = new ReplyBox(env.instanceUrl, this.#statusId); // TODO: make this un-hardcoded
-			replyBox.setReplyingToId(this.#statusId);
-			target.after(replyBox);
-		})
-	}
-
-	connectedCallback() {
-		this.appendChild(statusFooterTemplate.cloneNode(true));
-
-		this.#replyButton = this.querySelector("#reply-button") as HTMLButtonElement;
-		this.#boostButton = this.querySelector("#boost-button") as HTMLButtonElement;
-		this.#favoriteButton = this.querySelector("#favorite-button") as HTMLButtonElement;
-		
-		this.#boostButton.addEventListener("click", (event) => {
-			if(this.#statusId) {
-				if(this.#boosted) {
-					mastodon.statuses.unboostStatus(env.instanceUrl, env.token, this.#statusId).then(() => this.setBoosted(false));
-				} else {
-					mastodon.statuses.boostStatus(env.instanceUrl, env.token, this.#statusId).then((status) => {
-						this.setBoosted(true);
-					});
-				}
-			}
-		});
-
-		this.#favoriteButton.addEventListener("click", (event) => {
-			if(this.#statusId) {
-				if(this.#faved) {
-					mastodon.statuses.unfavouriteStatus(env.instanceUrl, env.token, this.#statusId).then(() => this.setFaved(false));
-				} else {
-					mastodon.statuses.favouriteStatus(env.instanceUrl, env.token, this.#statusId).then((status) => {
-						this.setFaved(true);
-					});
-				}
-			}
-		});
-	}
-}
-
-export class StatusContent extends HTMLElement {
-	postContent: HTMLDivElement;
-	attachmentContainer: HTMLDivElement;
-	#card: LinkCard;
-
-	constructor() {
-		super();
-	}
-
-	setContent(content: string | DocumentFragment) {
-		if(this.postContent) {
-			if(typeof content == "string") {
-
-			} else {
-				this.postContent.appendChild(content);
-			}
-		} else {
-			console.error(`post content element on ${this} doesn't exist!`);
-		}
-	}
-
-	setAttachments(attachments: HTMLElement[]) {
-		for(const attachment of attachments) {
-			this.attachmentContainer.appendChild(attachment);
-		}
-	}
-
-	addCard(linkUrl?: URL, title?: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
-		if(this.#card) {
-			console.warn("card already exists");
-		} else if(linkUrl && title && (imageUrl || description)) {
-			const card = new LinkCard;
-			this.querySelector("#post-content").appendChild(card);
-			this.#card = card;
-			
-			card.setAll(linkUrl, title, imageUrl, description, imageWidth, imageHeight);
-		}
-	}
-
-	removeCard() {
-		if(this.#card) {
-			this.#card.remove();
-			this.#card = undefined;
-		} else {
-			console.warn("tried to remove card but it doesn't exist");
-		}
-	}
-
-	connectedCallback() {
-		this.appendChild(statusContentTemplate.cloneNode(true));
-
-		this.postContent = this.querySelector("#post-content") as HTMLDivElement;
-		this.attachmentContainer = this.querySelector("#post-attachments") as HTMLDivElement;
-	}
-}
-
-export class StatusContentWarned extends StatusContent {
-	#contentWarning: HTMLElement;
-	
-	constructor() {
-		super();
-	}
-
-	setContentWarning(cw: string) {
-		this.#contentWarning.innerText = cw;
-	}
-
-	connectedCallback() {
-		this.appendChild(statusContentWarnedTemplate.cloneNode(true));
-
-		this.postContent = this.querySelector("#post-content") as HTMLDivElement;
-		this.attachmentContainer = this.querySelector("#post-attachments") as HTMLDivElement;
-		this.#contentWarning = this.querySelector("#cw");
-	}
-}
-
-export class Status extends Card {
-	instanceUrl: URL;
-	isUnfocused: boolean;
-
-	status: mastodon.Status;
-	isReblog: boolean;
-
-	header: StatusHeader;
-	footer: StatusFooter;
-	content: StatusContent;
-
-	events: StatusEvents;
-
-	template: DocumentFragment;
-
-	constructor(
-		instanceUrl: URL,
-		status: mastodon.Status,
-		events?: StatusEvents,
-		isUnfocused?: boolean
-	) {
-		super();
-
-		this.instanceUrl = instanceUrl;
-		isUnfocused != undefined ? this.isUnfocused = isUnfocused : this.isUnfocused = false;
-		this.status = status;
-		status.reblog ? this.isReblog = true : this.isReblog = false;
-
-		this.events = events;
-
-		this.template = statusTemplate;
-	}
-
-	setStatus(status: mastodon.Status) {
-		const localProfileUrl = new URL("./user/", window.location.origin);
-		localProfileUrl.searchParams.append("acct", `@${status.account.acct}`);
-
-		this.id = `status-${status.id}`;
-
-		if(this.isReblog) {
-			this.header.setLabel(`<a href="/user/?acct=@${this.status.account.acct}"><span class="material-symbols-outlined">repeat</span> <img class="avatar inline-img" src="${this.status.account.avatar}" alt=""> <span class="display-name">${(this.status.account.displayName || this.status.account.displayName != "") ? renderEmojis(this.status.account.displayName, this.status.account.emojis) : this.status.account.username}</span> boosted</a>`);
-		} else if(this.status.inReplyToId) {
-			// mastodon.accounts.getAccount(this.instanceUrl, status.inReplyToAccountId, env.token).then((repliedToAccount) => {
-			// 	this.header.setLabel(`<span class="material-symbols-outlined">reply</span> in reply to <img class="avatar inline-img" src="${repliedToAccount.avatar}" alt=""> <span class="display-name">${(repliedToAccount.displayName || repliedToAccount.displayName != "") ? renderEmojis(repliedToAccount.displayName, repliedToAccount.emojis) : repliedToAccount.username}</span>`);
-			// });
-		}
-
-		let outDisplayName = (status.account.displayName || status.account.displayName != "") ? renderEmojis(status.account.displayName, status.account.emojis) as string : status.account.username;
-
-		// setting header info
-		this.header.setProfileInfo(
-			status.account.avatar,
-			outDisplayName,
-			parseHandle(`@${status.account.acct}`),
-			new URL(`/@${status.account.acct}`, window.location.origin)
-		);
-		this.header.setTime(status.createdAt);
-
-		// setting click events in header
-		this.header.profileLink.addEventListener("click", (event) => {
-			event.preventDefault();
-			this.events.onProfileLinkClick(status.account.acct);
-		});
-
-		if(!this.isUnfocused) {
-			this.footer.setStatusInfo(
-				status.id,
-				(status.visibility != mastodon.StatusVisibility.Private && status.visibility != mastodon.StatusVisibility.Direct),
-				status.reblogged,
-				status.favourited
-			);
-			this.footer.connectReplyButton(this);
-		}
-		
-		if(status.language) {
-			this.setAttribute("lang", status.language.language);
-		} else if(this.hasAttribute("lang")) {
-			this.removeAttribute("lang");
-		}
-
-		if(status.sensitive || status.spoilerText != "") {
-			if(!(this.content instanceof StatusContentWarned)) {
-				if(this.content) {
-					this.content.remove();
-				}
-
-				this.content = new StatusContentWarned;
-				this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
-			}
-
-			if(status.spoilerText != "") {
-				(this.content as StatusContentWarned).setContentWarning(`⚠️ ${status.spoilerText}`);
-			}
-		} else {
-			if(this.content && this.content instanceof StatusContentWarned) {
-				this.content.remove();
-			}
-
-			this.content = new StatusContent;
-			this.content.slot = "content";
-			this.shadowRoot.getElementById("status-content-target").appendChild(this.content);
-		}
-
-		this.content.setContent(renderEmojis(status.content, status.emojis));
-
-		if(status.mediaAttachments.length > 0) {
-			this.content.setAttachments(renderAttachments(status.mediaAttachments));
-		}
-
-		if(status.card != null && !this.isUnfocused) {
-			oEmbed.getoEmbed(status.card.url, undefined, 512, "json").then((response) => {
-					if(response) {
-						console.log(response);
-						if(response instanceof oEmbed.VideoResponse || response instanceof oEmbed.RichResponse) {
-							let iframe: HTMLIFrameElement;
-							
-							// we add an exception for tumblr posts here since they do a thing where they return a script that then *loads* the tumblr post
-							if(response.html.body.getElementsByTagName("iframe").length > 0 || response.html.body.querySelector(".tumblr-post")) {
-								iframe = response.html.body.getElementsByTagName("iframe").item(0);
-							} else {
-								iframe = document.createElement("iframe");
-								iframe.srcdoc = response.html.body.innerHTML;
-							}
-
-							iframe.width = "";
-							iframe.height = "";
-							iframe.style.aspectRatio = `${response.width}/${response.height}`;
-							this.content.appendChild(iframe);
-							iframe.addEventListener("load", (event) => {
-								iframe.height = String(iframe.scrollHeight);
-							});
-						}
-					} else {
-						this.content.addCard(status.card.url, status.card.title, status.card.image, status.card.description, status.card.width, status.card.height);
-					}
-				});
-		} else if(this.content.getElementsByTagName("app-link-card").length > 0) {
-			this.content.removeCard();
-		}
-	}
-
-	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		const header = new StatusHeader(!this.isUnfocused);
-
-		shadow.adoptedStyleSheets = [materialIcons, commonStylesheet, statusStylesheet];
-
-		shadow.appendChild(this.template.cloneNode(true));
-		shadow.getElementById("status-root").prepend(header);
-
-		this.header = header;
-
-		if(!this.isUnfocused) {
-			const footer = new StatusFooter;
-
-			shadow.getElementById("status-root").appendChild(footer);
-			this.footer = footer;
-
-			this.header.menuButton.addEventListener("click", (event) => {
-				console.log(event);
-				
-				let localUrl: URL;
-				let remoteUrl: URL;
-
-				if(this.isReblog) {
-					localUrl = new URL(`/@${this.status.reblog.account.acct}/${this.status.reblog.id}`, this.instanceUrl);
-					remoteUrl = this.status.reblog.url;
-				} else {
-					localUrl = new URL(`/@${this.status.account.acct}/${this.status.id}`, this.instanceUrl);
-					remoteUrl = this.status.url;
-				}
-				
-				const menu = new Menu([
-					{
-						categoryName: "Debug",
-						contents: [
-							{name: "Log status", onClick: () => {console.log(this.status)}, icon: "description"},
-							{name: "Log status ID", onClick: () => {console.log(this.status.id)}, icon: "id_card"},
-							{name: "Log status content", onClick: () => {console.log(this.status.content)}, icon: "description"}
-						]
-					},
-					{
-						categoryName: "Instance",
-						contents: [
-							{name: "View on instance", onClick: () => {open(localUrl, "_blank")}, icon: "language"},
-							{name: "View on remote instance", onClick: () => {open(remoteUrl, "_blank")}, icon: "language"}
-						]
-					}
-				]);
-				const viewTarget = document.getElementById("view-target");
-				if(viewTarget) {
-					menu.style.top = `${this.header.menuButton.offsetTop - viewTarget.scrollTop}px`;
-					menu.style.left = `${this.header.menuButton.offsetLeft - viewTarget.scrollLeft}px`;
-				} else {
-					menu.style.top = `${this.header.menuButton.offsetTop}px`;
-					menu.style.left = `${this.header.menuButton.offsetLeft}px`;
-				}
-				this.parentElement.appendChild(menu);
-
-				// we put the event listener on a timeout so that it doesn't try to detect a click before the menu opens
-				setTimeout(() => {
-					window.addEventListener("click", (event) => {
-						clickOutsideHandler(event, menu);
-					});
-				}, 50);
-			});
-		} else {
-			shadow.adoptedStyleSheets.push(statusUnfocusedStylesheet);
-		}
-
-		if(this.isReblog) {
-			this.setStatus(this.status.reblog);
-		} else {
-			this.setStatus(this.status);
-		}
-
-		this.shadowRoot.addEventListener("click", (event) => {
-			// clicking on these means that you probably don't want to go to the status page
-			const ignoredTags = ["A", "SUMMARY", "IMG", "VIDEO", "BUTTON"];
-			const clickedElementTagName = (event.target as HTMLElement).tagName;
-
-			let ignoreEvent = false;
-
-			for(const tagName of ignoredTags) {
-				if(clickedElementTagName == tagName) {
-					ignoreEvent = true;
-				}
-			}
-
-			if(!ignoreEvent) {
-				this.events.onStatusClick(this.status.id);
-			}
-		});
-	}
-}
-
-export class StatusThread extends Status {
-	rootStatus: mastodon.Status;
-	
-	constructor(
-		instanceUrl: URL,
-		status: mastodon.Status,
-		events?: StatusEvents
-	) {
-		super(
-			instanceUrl,
-			status,
-			events
-		);
-
-		this.template = statusThreadTemplate;
-	}
-	
-	setStatus(status: mastodon.Status) {
-		this.rootStatus = this.status;
-
-		super.setStatus(status);
-
-		mastodon.statuses.getStatusContext(this.instanceUrl, this.rootStatus.id, env.token).then((context) => {
-			if(context.ancestors.length > 0) {
-				const firstStatus = new Status(this.instanceUrl, context.ancestors[0], undefined, true);
-				this.shadowRoot.getElementById("before-root-status").appendChild(firstStatus);
-				if(context.ancestors.length > 1) {
-					this.shadowRoot.insertBefore(new Text(`+${context.ancestors.length - 1} more`), this.shadowRoot.getElementById("status-root"));
-				}
-			}
-		});
-	}
-
-	connectedCallback() {
-		super.connectedCallback();
-	}
-}
-
-export class LinkCard extends HTMLElement {
-	#link: HTMLAnchorElement;
-	#image: HTMLImageElement;
-	#title: HTMLHeadingElement;
-	#description: HTMLParagraphElement;
-	
-	constructor() {
-		super();
-	}
-
-	setLink(url: URL) {
-		this.#link.href = url.href;
-	}
-
-	setImage(url: URL, imageWidth?: number, imageHeight?: number) {
-		// TODO: maybe some blurhash stuff here
-
-		this.#image.src = url.href;
-		this.#image.hidden = false;
-		this.style.maxWidth = `${imageWidth}px`;
-	}
-
-	setTitle(text: string) {
-		this.#title.innerText = text;
-	}
-
-	setDescription(text: string) {
-		this.#description.innerHTML = text;
-	}
-
-	setAll(linkUrl: URL, title: string, imageUrl?: URL, description?: string, imageWidth?: number, imageHeight?: number) {
-		this.setLink(linkUrl);
-		this.setTitle(title);
-		if(imageUrl) {
-			this.setImage(imageUrl, imageWidth, imageHeight);
-		}
-		if(description) {
-			this.setDescription(description);
-		}
-	}
-
-	connectedCallback() {
-		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, linkCardStylesheet];
-		shadow.appendChild(linkCardTemplate.cloneNode(true));
-
-		this.#link = shadow.getElementById("link") as HTMLAnchorElement;
-		this.#image = shadow.getElementById("image") as HTMLImageElement;
-		this.#title = shadow.getElementById("title") as HTMLHeadingElement;
-		this.#description = shadow.getElementById("description") as HTMLParagraphElement;
 	}
 }
 
@@ -715,9 +100,9 @@ export class Timeline extends HTMLElement {
 
 	instanceUrl: URL;
 
-	statuses: Status[];
+	statuses: statusElements.Status[];
 
-	statusEvents: StatusEvents;
+	statusEvents: util.StatusEvents;
 
 	#loadMoreButton: HTMLButtonElement;
 	
@@ -725,7 +110,7 @@ export class Timeline extends HTMLElement {
 	#showBoosts: boolean;
 	#showReplies: boolean;
 	
-	constructor(instanceUrl: URL, statusEvents?: StatusEvents) {
+	constructor(instanceUrl: URL, statusEvents?: util.StatusEvents) {
 		super();
 
 		this.instanceUrl = instanceUrl;
@@ -734,12 +119,12 @@ export class Timeline extends HTMLElement {
 	}
 
 	prependStatus(status: mastodon.Status) {
-		let statusElement: Status;
-		status.inReplyToId ? statusElement = new StatusThread(
+		let statusElement: statusElements.Status;
+		status.inReplyToId ? statusElement = new statusElements.StatusThread(
 			this.instanceUrl,
 			status,
 			this.statusEvents
-		) : statusElement = new Status(
+		) : statusElement = new statusElements.Status(
 			this.instanceUrl,
 			status,
 			this.statusEvents
@@ -755,12 +140,12 @@ export class Timeline extends HTMLElement {
 			if((!this.#showReplies && status.inReplyToId) || (!this.#showBoosts && status.reblog)) {
 				continue;
 			} else {
-				let statusElement: Status;
-				status.inReplyToId ? statusElement = new StatusThread(
+				let statusElement: statusElements.Status;
+				status.inReplyToId ? statusElement = new statusElements.StatusThread(
 					this.instanceUrl,
 					status,
 					this.statusEvents
-				) : statusElement = new Status(
+				) : statusElement = new statusElements.Status(
 					this.instanceUrl,
 					status,
 					this.statusEvents
@@ -783,17 +168,17 @@ export class Timeline extends HTMLElement {
 		console.log(`lt: ${this.instanceUrl} ${type} ${value}`);
 		switch(type) {
 			case "account":
-				mastodon.accounts.getStatuses(this.instanceUrl, value, token ?? null, this.#lastPostId).then((data: mastodon.Status[]) => {
+				mastodon.accounts.getStatuses(this.instanceUrl, value, env.token ?? null, this.#lastPostId).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
 			case "tag":
-				mastodon.timelines.getHashtagTimeline(this.instanceUrl, value, token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.timelines.getHashtagTimeline(this.instanceUrl, value, env.token ?? null, undefined, undefined, undefined, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 				});
 				break;
 			case "public":
-				mastodon.timelines.getPublicTimeline(this.instanceUrl, token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.timelines.getPublicTimeline(this.instanceUrl, env.token ?? null, undefined, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 					mastodon.timelines.streaming.establishWebSocketConnection(this.instanceUrl, env.token, mastodon.timelines.streaming.Streams.Public, undefined, undefined, true).addEventListener("message", (message) => {
 						const data = JSON.parse(message.data);
@@ -813,12 +198,12 @@ export class Timeline extends HTMLElement {
 				});
 				break;
 			case "local":
-				mastodon.timelines.getPublicTimeline(this.instanceUrl, token ?? null, true, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data) => {
+				mastodon.timelines.getPublicTimeline(this.instanceUrl, env.token ?? null, true, undefined, undefined, this.#lastPostId, undefined, undefined, undefined).then((data) => {
 					this.addStatuses(data);
 				});
 				break;
 			case "home":
-				mastodon.timelines.getHomeTimeline(this.instanceUrl, token, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
+				mastodon.timelines.getHomeTimeline(this.instanceUrl, env.token, this.#lastPostId, undefined, undefined, undefined).then((data: mastodon.Status[]) => {
 					this.addStatuses(data);
 					mastodon.timelines.streaming.establishWebSocketConnection(this.instanceUrl, env.token, mastodon.timelines.streaming.Streams.User, undefined, undefined, true).addEventListener("message", (message) => {
 						const data = JSON.parse(message.data);
@@ -1002,7 +387,7 @@ export class TagInput extends HTMLElement {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet];
+		shadow.adoptedStyleSheets = [util.commonStylesheet];
 		shadow.appendChild(tagInputTemplate.cloneNode(true));
 
 		this.hasSpawnedNextInput = false;
@@ -1038,10 +423,9 @@ export class PostBox extends Card {
 		}
 
 		mastodon.statuses.postStatus(env.instanceUrl, env.token, undefined, postText).then((status) => {
-			postSentEvent = new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
+			document.dispatchEvent(new CustomEvent("postsent", {bubbles: false, cancelable: false, composed: true, detail: {
 				status: status
-			}})
-			document.dispatchEvent(postSentEvent);
+			}}));
 
 			this.postInput.innerText = "";
 			this.postButton.disabled = true;
@@ -1153,7 +537,7 @@ export class PostBox extends Card {
 
 	connectedCallback() {
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, postBoxStylesheet];
+		shadow.adoptedStyleSheets = [util.commonStylesheet, postBoxStylesheet];
 		shadow.appendChild(postBoxTemplate.cloneNode(true));
 
 		this.form = shadow.getElementById("form") as HTMLFormElement;
@@ -1241,7 +625,7 @@ export class ReplyBox extends PostBox {
 		}
 
 		mastodon.statuses.postStatus(this.instanceUrl, env.token, undefined, postText, undefined, undefined, this.#replyId).then((status) => {
-			const newStatus = new Status(this.instanceUrl, status as mastodon.Status);
+			const newStatus = new statusElements.Status(this.instanceUrl, status as mastodon.Status);
 			this.parentNode.insertBefore(newStatus, this.nextElementSibling);
 			this.remove();
 		})
@@ -1266,7 +650,7 @@ export class Modal extends HTMLElement {
 	connectedCallback() {
 		const template = `<div id="bg"><div id="dialog"><button id="close">Close</button><slot></slot></div></div>`;
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [commonStylesheet, modalStylesheet];
+		shadow.adoptedStyleSheets = [util.commonStylesheet, modalStylesheet];
 		shadow.innerHTML = template;
 
 		shadow.getElementById("close").addEventListener("click", (event) => {
@@ -1276,16 +660,16 @@ export class Modal extends HTMLElement {
 }
 
 export class Menu extends HTMLElement {
-	options: MenuCategory[] | MenuItem[];
+	options: util.MenuCategory[] | util.MenuItem[];
 	menuRoot: HTMLUListElement;
 	
-	constructor(options: MenuCategory[] | MenuItem[]) {
+	constructor(options: util.MenuCategory[] | util.MenuItem[]) {
 		super();
 
 		this.options = options;
 	}
 
-	addOptions(options: MenuItem[], target: HTMLUListElement) {
+	addOptions(options: util.MenuItem[], target: HTMLUListElement) {
 		for(const option of options) {
 			const menuItem = document.createElement("li");
 			menuItem.classList.add("menu-item");
@@ -1321,105 +705,39 @@ export class Menu extends HTMLElement {
 	connectedCallback() {
 		const template = `<ul id="root" role="menu"></ul>`;
 		const shadow = this.attachShadow({mode: "open"});
-		shadow.adoptedStyleSheets = [materialIcons, commonStylesheet, menuStylesheet];
+		shadow.adoptedStyleSheets = [util.materialIcons, util.commonStylesheet, menuStylesheet];
 		shadow.innerHTML = template;
 
 		this.menuRoot = shadow.getElementById("root") as HTMLUListElement;
 
 		if("categoryName" in this.options[0]) {
-			for(const category of this.options as MenuCategory[]) {
+			for(const category of this.options as util.MenuCategory[]) {
 				const categoryList = document.createElement("ul");
 				categoryList.setAttribute("category", category.categoryName);
 				this.addOptions(category.contents, categoryList);
 				this.menuRoot.appendChild(categoryList);
 			}
 		} else {
-			this.addOptions(this.options as MenuItem[], this.menuRoot);
+			this.addOptions(this.options as util.MenuItem[], this.menuRoot);
 		}
 	}
 }
 
-async function getStylesheet(url: string): Promise<CSSStyleSheet> {
-	const stylesheet = new CSSStyleSheet();
-	const response = await fetch(url);
-	const stylesheetContent = await response.text();
+export function init() {
+	statusElements.init();
+	viewElements.init();
 
-	stylesheet.replace(stylesheetContent);
+	customElements.define("app-profile-header", ProfileHeader);
 
-	return stylesheet;
+	customElements.define("app-timeline", Timeline);
+
+	customElements.define("app-nav-sidebar", NavigationSidebar);
+
+	customElements.define("app-tag-input", TagInput);
+	customElements.define("app-post-box", PostBox);
+	customElements.define("app-reply-box", ReplyBox);
+
+	customElements.define("app-modal", Modal);
+
+	customElements.define("app-menu", Menu);
 }
-
-async function getTemplate(url: string, templateId: string): Promise<DocumentFragment> {
-	const response = await fetch(url);
-	const template = (new DOMParser().parseFromString(await response.text(), "text/html").getElementById(templateId) as HTMLTemplateElement);
-
-	return template.content;
-}
-
-async function initTemplates() {
-	profileHeaderTemplate = await getTemplate("/templates/profile.html", "header");
-	cardTemplate = await getTemplate("/templates/card.html", "card");
-	statusHeaderTemplate = await getTemplate("/templates/status.html", "header");
-	statusFooterTemplate = await getTemplate("/templates/status.html", "footer");
-	statusContentTemplate = await getTemplate("/templates/status.html", "content");
-	statusContentWarnedTemplate = await getTemplate("/templates/status.html", "content-cw");
-	statusTemplate = await getTemplate("/templates/status.html", "status");
-	statusThreadTemplate = await getTemplate("/templates/status.html", "status-thread");
-	linkCardTemplate = await getTemplate("/templates/link-card.html", "card");
-	timelineTemplate = await getTemplate("/templates/timeline.html", "timeline");
-	postBoxTemplate = await getTemplate("/templates/post.html", "postbox");
-	tagInputTemplate = await getTemplate("/templates/post.html", "taginput");
-	settingsModalTemplate = await getTemplate("/templates/modal.html", "settings");
-}
-
-async function initStylesheets() {
-	materialIcons = await getStylesheet("/fonts/material-symbols-outlined-class.css");
-
-	commonStylesheet = await getStylesheet("/css/components/common.css");
-	profileHeaderStylesheet = await getStylesheet("/css/components/profile-header.css");
-	statusStylesheet = await getStylesheet("/css/components/status.css");
-	statusUnfocusedStylesheet = await getStylesheet("/css/components/status-unfocused.css");
-	linkCardStylesheet = await getStylesheet("/css/components/link-card.css");
-	postBoxStylesheet = await getStylesheet("/css/components/post-box.css");
-	modalStylesheet = await getStylesheet("/css/components/modal.css");
-	menuStylesheet = await getStylesheet("/css/components/menu.css");
-}
-
-function initComponents() {
-	initTemplates().then(() => {
-		initStylesheets().then(() => {
-			customElements.define("app-card", Card);
-			customElements.define("app-profile-header", ProfileHeader);
-
-			customElements.define("app-status-header", StatusHeader, {extends: "header"});
-			customElements.define("app-status-footer", StatusFooter, {extends: "footer"});
-			customElements.define("app-status-content", StatusContent);
-			customElements.define("app-status-content-warned", StatusContentWarned);
-			customElements.define("app-status", Status);
-			customElements.define("app-status-thread", StatusThread);
-			customElements.define("app-link-card", LinkCard);
-
-			customElements.define("app-timeline", Timeline);
-
-			customElements.define("app-nav-sidebar", NavigationSidebar);
-
-			customElements.define("app-tag-input", TagInput);
-			customElements.define("app-post-box", PostBox);
-			customElements.define("app-reply-box", ReplyBox);
-
-			customElements.define("app-modal", Modal);
-
-			customElements.define("app-menu", Menu);
-
-			customElements.define("app-view-home", views.HomeView);
-			customElements.define("app-view-public", views.PublicTimelineView);
-			customElements.define("app-view-local", views.LocalTimelineView);
-			customElements.define("app-view-account", views.AccountView);
-			customElements.define("app-view-status", views.StatusView);
-
-			customElements.define("app-modal-view-settings", views.ModalSettingsView);
-		});
-	});
-}
-
-initComponents();

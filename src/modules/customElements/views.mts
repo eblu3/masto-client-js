@@ -1,68 +1,78 @@
 import * as env from "../../env.mjs";
 import * as mastodon from "../mastodon/mastodon.mjs";
-import { Timeline, StatusEvents, PostBox, ProfileHeader, Status, ReplyBox, settingsModalTemplate } from "./customElements.mjs";
+import { Timeline, PostBox, ProfileHeader, ReplyBox } from "./customElements.mjs";
+import * as util from "./util.mjs";
+import { Status } from "./status.mjs";
 
+const settingsModalTemplate = await util.getTemplate("/templates/modal.html", "settings");
 
-export class HomeView extends HTMLElement {
+export class View extends HTMLElement {
 	instanceUrl: URL;
+	token: string;
 
-	timeline: Timeline;
-
-	statusEvents: StatusEvents;
-
-	constructor(instanceUrl: URL, statusEvents?: StatusEvents) {
+	constructor(instanceUrl: URL, token?: string) {
 		super();
 
 		this.instanceUrl = instanceUrl;
+		this.token = token;
+	}
+}
+
+export class TimelineView extends View {
+	timeline: Timeline;
+	statuses: mastodon.Status[];
+	statusEvents: util.StatusEvents;
+
+	constructor(instanceUrl: URL, token?: string, statusEvents?: util.StatusEvents) {
+		super(instanceUrl, token);
+
 		this.statusEvents = statusEvents;
 	}
 
 	connectedCallback() {
+		this.timeline = new Timeline(this.instanceUrl, this.statusEvents);
+	}
+}
+
+export class HomeView extends TimelineView {
+	constructor(instanceUrl: URL, token?: string, statusEvents?: util.StatusEvents) {
+		super(instanceUrl, token, statusEvents);
+	}
+
+	connectedCallback() {
+		super.connectedCallback();
 		const postBox = new PostBox();
 
-		const homeTimelineObject = new Timeline(
-			this.instanceUrl,
-			this.statusEvents
-		);
-		homeTimelineObject.setAttribute("type", "home");
-		this.timeline = homeTimelineObject;
+		this.timeline.setAttribute("type", "home");
 
 		this.appendChild(postBox);
-		this.appendChild(homeTimelineObject);
+		this.appendChild(this.timeline);
 	}
 }
 
-export class PublicTimelineView extends HTMLElement {
-	instanceUrl: URL;
-
-	constructor(instanceUrl: URL) {
-		super();
-
-		this.instanceUrl = instanceUrl;
+export class PublicTimelineView extends TimelineView {
+	constructor(instanceUrl: URL, token?: string, statusEvents?: util.StatusEvents) {
+		super(instanceUrl, token, statusEvents);
 	}
 
 	connectedCallback() {
-		const publicTimelineObject = new Timeline(this.instanceUrl);
-		publicTimelineObject.setAttribute("type", "public");
+		super.connectedCallback();
+		this.timeline.setAttribute("type", "public");
 
-		this.appendChild(publicTimelineObject);
+		this.appendChild(this.timeline);
 	}
 }
 
-export class LocalTimelineView extends HTMLElement {
-	instanceUrl: URL;
-
-	constructor(instanceUrl: URL) {
-		super();
-
-		this.instanceUrl = instanceUrl;
+export class LocalTimelineView extends TimelineView {
+	constructor(instanceUrl: URL, token?: string, statusEvents?: util.StatusEvents) {
+		super(instanceUrl, token, statusEvents);
 	}
 
 	connectedCallback() {
-		const localTimeline = new Timeline(this.instanceUrl);
-		localTimeline.setAttribute("type", "local");
+		super.connectedCallback();
+		this.timeline.setAttribute("type", "local");
 
-		this.appendChild(localTimeline);
+		this.appendChild(this.timeline);
 	}
 }
 
@@ -91,13 +101,13 @@ export class StatusView extends HTMLElement {
 	instanceUrl: URL;
 	id: string;
 
-	statusEvents: StatusEvents;
+	statusEvents: util.StatusEvents;
 
 	status: mastodon.Status;
 
 	statusElement: Status;
 
-	constructor(instanceUrl: URL, status: mastodon.Status, statusEvents?: StatusEvents) {
+	constructor(instanceUrl: URL, status: mastodon.Status, statusEvents?: util.StatusEvents) {
 		super();
 		this.instanceUrl = instanceUrl;
 		this.status = status;
@@ -139,4 +149,16 @@ export class ModalSettingsView extends HTMLElement {
 		this.instanceUrlInput.placeholder = env.instanceUrl.href;
 		this.instanceUrlInput.value = localStorage.getItem("instanceUrl");
 	}
+}
+
+export function init() {
+	customElements.define("app-view", View);
+
+	customElements.define("app-view-home", HomeView);
+	customElements.define("app-view-public", PublicTimelineView);
+	customElements.define("app-view-local", LocalTimelineView);
+	customElements.define("app-view-account", AccountView);
+	customElements.define("app-view-status", StatusView);
+
+	customElements.define("app-modal-view-settings", ModalSettingsView);
 }
