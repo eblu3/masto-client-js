@@ -14,6 +14,8 @@ interface ViewObject {
 
 interface ModalObject {
 	name: string;
+	title?: string;
+	description?: string;
 }
 
 const statusEvents: cstmElements.StatusEvents = {
@@ -165,13 +167,8 @@ function switchModalView(data: ModalObject) {
 				});
 			});
 			break;
-		case "test":
-			showModal(`
-				<h2>testttt</h2>
-				<p>This is a test.</p>
-				<button>This doesn't do anything</button>
-				`);
-			break;
+		case "error":
+			showModal(new cstmElements.views.ModalErrorView(data.title, data.description));
 		default:
 			console.error(`undefined modal view ${data.name}`);
 	}

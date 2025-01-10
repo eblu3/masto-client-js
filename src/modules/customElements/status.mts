@@ -210,10 +210,23 @@ export class StatusContent extends HTMLElement {
 			} else {
 				if(this.events.onProfileLinkClick) {
 					content.querySelectorAll("a.mention:not(.hashtag)").forEach((mention) => {
-						mastodon.accounts.search(env.instanceUrl, env.token, (mention as HTMLAnchorElement).href, undefined, undefined, true).then((accounts) => {
-							mention.addEventListener("click", (event) => {
-								event.preventDefault();
-								this.events.onProfileLinkClick(accounts[0].acct);
+						mention.addEventListener("click", (event) => {
+							event.preventDefault();
+							mastodon.search.search(
+								env.instanceUrl,
+								env.token,
+								(mention as HTMLAnchorElement).href,
+								mastodon.search.SearchType.Accounts,
+								true,
+								undefined,
+								undefined,
+								undefined,
+								undefined,
+								undefined,
+								1
+							).then((results) => {
+								console.log(results.accounts);
+								this.events.onProfileLinkClick(results.accounts[0].acct);
 							});
 						});
 					});
@@ -498,7 +511,7 @@ export class Status extends HTMLElement {
 
 		this.shadowRoot.addEventListener("click", (event) => {
 			// clicking on these means that you probably don't want to go to the status page
-			const ignoredTags = ["A", "SUMMARY", "IMG", "VIDEO", "BUTTON", "APP-LINK-CARD"];
+			const ignoredTags = ["A", "SUMMARY", "IMG", "VIDEO", "BUTTON", "APP-LINK-CARD", "SPAN"];
 			const clickedElementTagName = (event.target as HTMLElement).tagName;
 
 			console.log(clickedElementTagName);

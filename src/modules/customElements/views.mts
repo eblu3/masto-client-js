@@ -154,6 +154,32 @@ export class ModalSettingsView extends HTMLElement {
 	}
 }
 
+export class ModalErrorView extends HTMLElement {
+	errorTitle: string;
+	errorDescription: string;
+	
+	constructor(errorTitle: string, errorDescription?: string) {
+		super();
+
+		this.errorTitle = errorTitle;
+		this.errorDescription = errorDescription;
+	}
+
+	connectedCallback() {
+		const shadow = this.attachShadow({mode: "open"});
+		
+		const errorTitleElement = document.createElement("h2");
+		errorTitleElement.innerText = this.errorTitle;
+		shadow.appendChild(errorTitleElement);
+
+		if(this.errorDescription) {
+			const errorDescElement = document.createElement("p");
+			errorDescElement.innerText = this.errorDescription;
+			shadow.appendChild(errorDescElement);
+		}
+	}
+}
+
 export function init() {
 	customElements.define("app-view", View);
 

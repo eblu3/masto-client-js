@@ -1288,6 +1288,11 @@ export class TranslationPollOption {
 	}
 }
 
+export interface Error {
+	title?: string;
+	description?: string;
+}
+
 // === API METHODS === //
 
 // == TIMELINES == //
