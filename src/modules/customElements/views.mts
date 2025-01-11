@@ -118,12 +118,14 @@ export class StatusView extends HTMLElement {
 		this.statusEvents = statusEvents;
 
 		// we don't need to have a click handler for the status itself if we're already on the page!
-		this.rootStatusEvents = this.statusEvents;
-		this.rootStatusEvents.onStatusClick = null;
+		// also have to manually update this with the interface, due to structuredClone() throwing an error on functions
+		this.rootStatusEvents = {
+			onProfileLinkClick: statusEvents.onProfileLinkClick
+		};
 	}
 
 	connectedCallback() {
-		this.statusElement = new Status(this.instanceUrl, this.status, this.statusEvents);
+		this.statusElement = new Status(this.instanceUrl, this.status, this.rootStatusEvents);
 		this.appendChild(this.statusElement);
 		this.appendChild(new ReplyBox(this.instanceUrl, this.status.id));
 
