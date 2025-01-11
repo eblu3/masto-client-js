@@ -213,22 +213,43 @@ export class StatusContent extends HTMLElement {
 					content.querySelectorAll("a.mention:not(.hashtag)").forEach((mention) => {
 						mention.addEventListener("click", (event) => {
 							event.preventDefault();
-							mastodon.search.search(
-								env.instanceUrl,
-								env.token,
-								(mention as HTMLAnchorElement).href,
-								mastodon.search.SearchType.Accounts,
-								true,
-								undefined,
-								undefined,
-								undefined,
-								undefined,
-								undefined,
-								1
-							).then((results) => {
-								console.log(results.accounts);
-								this.events.onProfileLinkClick(results.accounts[0]);
-							});
+							try {
+								mastodon.search.search(
+									env.instanceUrl,
+									env.token,
+									(mention as HTMLAnchorElement).href,
+									mastodon.search.SearchType.Accounts,
+									true,
+									undefined,
+									undefined,
+									undefined,
+									undefined,
+									undefined,
+									1
+								).then((results) => {
+									console.log(results.accounts);
+									this.events.onProfileLinkClick(results.accounts[0]);
+								});
+							} catch {
+								mastodon.accounts.search(
+									env.instanceUrl,
+									env.token,
+									(mention as HTMLAnchorElement).innerText,
+									undefined,
+									undefined
+								).then((results) => {
+									let found = false;
+									for(const account of results) {
+										if(`@${account.acct}` == (mention as HTMLAnchorElement).innerText) {
+											this.events.onProfileLinkClick(account);
+											found = true;
+										}
+									}
+									if(!found) {
+										this.events.onProfileLinkClick(results[0]);
+									}
+								});
+							}
 						});
 					});
 				}
