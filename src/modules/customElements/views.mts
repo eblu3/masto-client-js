@@ -104,6 +104,7 @@ export class StatusView extends HTMLElement {
 	instanceUrl: URL;
 	id: string;
 
+	rootStatusEvents: util.StatusEvents;
 	statusEvents: util.StatusEvents;
 
 	status: mastodon.Status;
@@ -115,6 +116,10 @@ export class StatusView extends HTMLElement {
 		this.instanceUrl = instanceUrl;
 		this.status = status;
 		this.statusEvents = statusEvents;
+
+		// we don't need to have a click handler for the status itself if we're already on the page!
+		this.rootStatusEvents = this.statusEvents;
+		this.rootStatusEvents.onStatusClick = null;
 	}
 
 	connectedCallback() {
