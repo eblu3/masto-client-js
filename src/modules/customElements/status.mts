@@ -207,6 +207,7 @@ export class StatusContent extends HTMLElement {
 	setContent(content: string | DocumentFragment) {
 		if(this.postContent) {
 			if(typeof content == "string") {
+				this.postContent.innerText = content;
 			} else {
 				if(this.events.onProfileLinkClick) {
 					content.querySelectorAll("a.mention:not(.hashtag)").forEach((mention) => {
@@ -509,7 +510,7 @@ export class Status extends HTMLElement {
 			this.setStatus(this.status);
 		}
 
-		this.shadowRoot.addEventListener("click", (event) => {
+		shadow.getElementById("status-root").addEventListener("click", (event) => {
 			// clicking on these means that you probably don't want to go to the status page
 			const ignoredTags = ["A", "SUMMARY", "IMG", "VIDEO", "BUTTON", "APP-LINK-CARD", "SPAN"];
 			const clickedElementTagName = (event.target as HTMLElement).tagName;
