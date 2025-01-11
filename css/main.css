@@ -144,6 +144,10 @@ nav a {
 	text-decoration: none;
 }
 
+nav a[aria-current='page'] {
+	font-weight: bold;
+}
+
 nav a img, nav a .material-symbols-outlined {
 	margin-right: 0.33em;
 
@@ -159,6 +163,10 @@ nav a img {
 
 nav a .material-symbols-outlined {
 	font-size: 1.25em;
+}
+
+nav a[aria-current='page'] .material-symbols-outlined {
+	font-variation-settings: "FILL" 100;
 }
 
 app-timeline {

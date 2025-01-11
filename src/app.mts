@@ -113,7 +113,9 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 				});
 			}
 			if(!isPoppingState) {
-				if(data.acct) {
+				if(data.account) {
+					history.pushState(data, "", `/@${data.account.acct}`);
+				} else if(data.acct) {
 					history.pushState(data, "", `/@${data.acct}`);
 				} else {
 					history.pushState(data, "", `/user/${data.id}`);

@@ -42,7 +42,7 @@ export class ProfileHeader extends HTMLElement {
 		if(account != this.account) {
 			this.account = account;
 		}
-		
+
 		this.#container.style.setProperty("--header-url", `url(${account.header.href})`);
 		this.#avatar.src = account.avatar.href;
 		this.#displayName.innerHTML = (account.displayName || account.displayName != "") ? renderEmojis(account.displayName, account.emojis) as string : account.username;
@@ -339,7 +339,9 @@ export class Timeline extends HTMLElement {
 
 export class NavigationSidebar extends HTMLElement {
 	#items: {name: string, onClick: () => void, icon?: URL | string, link?: URL}[];
-	#youLink: HTMLAnchorElement;
+	navLinks: HTMLAnchorElement[];
+
+	activeItem: number;
 	
 	constructor(items: {name: string, onClick: () => void, icon?: URL | string, link?: URL}[]) {
 		super();
@@ -347,8 +349,23 @@ export class NavigationSidebar extends HTMLElement {
 		this.#items = items;
 	}
 
+	setActiveItem(index: number) {
+		if(index % 1 == 0) {
+			if(this.activeItem != undefined) {
+				this.navLinks[this.activeItem].ariaCurrent = "false";
+			}
+			this.activeItem = index;
+			this.navLinks[index].ariaCurrent = "page";
+		} else {
+			console.error("Index must be an integer.");
+		}
+	}
+
 	connectedCallback() {
-		for(const item of this.#items) {
+		this.navLinks = [];
+
+		for(let i = 0; i < this.#items.length; i++) {
+			const item = this.#items[i];
 			const navLink = document.createElement("a");
 
 			navLink.innerText = item.name;
@@ -373,18 +390,13 @@ export class NavigationSidebar extends HTMLElement {
 			}
 
 			this.appendChild(navLink);
+			this.navLinks.push(navLink);
 			navLink.addEventListener("click", (event) => {
 				event.preventDefault();
+				this.setActiveItem(i);
 				item.onClick();
 			});
 		}
-		// shadow.appendChild(navigationSidebarTemplate.cloneNode(true));
-
-		// this.#youLink = shadow.getElementById("you-link") as HTMLAnchorElement;
-		
-		// mastodon.accounts.verifyCredentials(env.instanceUrl, env.token).then((account) => {
-		// 	this.#youLink.href = `/user/?acct=@${account.acct}`;
-		// })
 	}
 }
 
