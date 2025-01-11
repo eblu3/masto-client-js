@@ -478,8 +478,8 @@ export class Status extends HTMLElement {
 					{
 						categoryName: "Instance",
 						contents: [
-							{ name: `View on ${this.instanceUrl.hostname}`, onClick: () => { open(localUrl, "_blank"); }, icon: "language" },
-							{ name: "View on remote instance", onClick: () => { open(remoteUrl, "_blank"); }, icon: "language" }
+							{ name: `View on ${localUrl.hostname}`, onClick: () => { open(localUrl, "_blank"); }, icon: "language" },
+							{ name: `View on ${remoteUrl.hostname}`, onClick: () => { open(remoteUrl, "_blank"); }, icon: "language" }
 						]
 					}
 				]);
