@@ -8,6 +8,7 @@ interface ViewObject {
 	name: string;
 	id?: string;
 	acct?: string;
+	account?: mastodon.Account;
 	status?: mastodon.Status;
 	modal?: ModalObject;
 }
@@ -22,8 +23,12 @@ const statusEvents: cstmElements.StatusEvents = {
 	onStatusClick: (id: string) => {
 		switchView({name: "status", id: id});
 	},
-	onProfileLinkClick: (acct: string) => {
-		switchView({name: "account", acct: acct});
+	onProfileLinkClick: (acct: string | mastodon.Account) => {
+		if(typeof acct == "string") {
+			switchView({name: "account", acct: acct});
+		} else {
+			switchView({name: "account", account: acct});
+		}
 	}
 }
 
@@ -93,12 +98,15 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			break;
 		case "account":
 			currentState = data;
-			if(data.acct) {
+			if(data.account) {
+				currentView = new cstmElements.views.AccountView(instanceUrl, data.account, token, statusEvents);
+				viewTarget.appendChild(currentView);
+			} else if(data.acct) {
 				mastodon.accounts.lookupUsername(instanceUrl, data.acct).then((account) => {
 					currentView = new cstmElements.views.AccountView(instanceUrl, account, token, statusEvents);
 					viewTarget.appendChild(currentView);
 				});
-			} else {
+			} else if(data.id) {
 				mastodon.accounts.get(instanceUrl, data.id, token).then((account) => {
 					currentView = new cstmElements.views.AccountView(instanceUrl, account, token, statusEvents);
 					viewTarget.appendChild(currentView);

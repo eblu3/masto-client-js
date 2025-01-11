@@ -227,7 +227,7 @@ export class StatusContent extends HTMLElement {
 								1
 							).then((results) => {
 								console.log(results.accounts);
-								this.events.onProfileLinkClick(results.accounts[0].acct);
+								this.events.onProfileLinkClick(results.accounts[0]);
 							});
 						});
 					});
@@ -355,7 +355,7 @@ export class Status extends HTMLElement {
 		// setting click events in header
 		this.header.profileLink.addEventListener("click", (event) => {
 			event.preventDefault();
-			this.events.onProfileLinkClick(status.account.acct);
+			this.events.onProfileLinkClick(status.account);
 		});
 
 		if(!this.isUnfocused) {
@@ -478,7 +478,7 @@ export class Status extends HTMLElement {
 					{
 						categoryName: "Instance",
 						contents: [
-							{ name: "View on instance", onClick: () => { open(localUrl, "_blank"); }, icon: "language" },
+							{ name: `View on ${this.instanceUrl.hostname}`, onClick: () => { open(localUrl, "_blank"); }, icon: "language" },
 							{ name: "View on remote instance", onClick: () => { open(remoteUrl, "_blank"); }, icon: "language" }
 						]
 					}

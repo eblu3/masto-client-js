@@ -1,3 +1,5 @@
+import * as mastodon from "../mastodon/mastodon.mjs";
+
 export interface MenuCategory {
 	categoryName: string;
 	contents: MenuItem[];
@@ -12,7 +14,7 @@ export interface MenuItem {
 
 export interface StatusEvents {
 	onStatusClick?: (id: string) => void;
-	onProfileLinkClick?: (acct: string) => void;
+	onProfileLinkClick?: (acct: string | mastodon.Account) => void;
 }
 
 export function clickOutsideHandler(event: Event, elementToDetect: HTMLElement) {
