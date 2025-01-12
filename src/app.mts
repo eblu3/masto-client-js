@@ -8,7 +8,7 @@ interface ViewObject {
 	name: string;
 	id?: string;
 	acct?: string;
-	account?: mastodon.Account;
+	account?: string;
 	status?: mastodon.Status;
 	modal?: ModalObject;
 }
@@ -27,7 +27,9 @@ const statusEvents: cstmElements.StatusEvents = {
 		if(typeof acct == "string") {
 			switchView({name: "account", acct: acct});
 		} else {
-			switchView({name: "account", account: acct});
+			console.log(acct);
+			console.log(JSON.stringify(acct));
+			switchView({name: "account", account: JSON.stringify(acct)});
 		}
 	}
 }
@@ -98,8 +100,41 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			break;
 		case "account":
 			currentState = data;
+			let parsedAccount: mastodon.Account;
 			if(data.account) {
-				currentView = new cstmElements.views.AccountView(instanceUrl, data.account, token, statusEvents);
+				parsedAccount = JSON.parse(data.account, (key, value) => {
+					const urlKeys = [
+						"url",
+						"avatar",
+						"avatarStatic",
+						"header",
+						"headerStatic"
+					];
+					const dateKeys = [
+						"createdAt",
+						"lastStatusAt"
+					];
+
+					if(value != null) {
+						for(const urlKey of urlKeys) {
+							if(key == urlKey) {
+								return new URL(value);
+							}
+						}
+						for(const dateKey of dateKeys) {
+							if(key == dateKey) {
+								return new Date(value);
+							}
+						}
+					}
+
+					return value;
+				}) as mastodon.Account;
+
+				console.log(data.account);
+				console.log(parsedAccount);
+				
+				currentView = new cstmElements.views.AccountView(instanceUrl, parsedAccount, token, statusEvents);
 				viewTarget.appendChild(currentView);
 			} else if(data.acct) {
 				mastodon.accounts.lookupUsername(instanceUrl, data.acct).then((account) => {
@@ -114,7 +149,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			}
 			if(!isPoppingState) {
 				if(data.account) {
-					history.pushState(data, "", `/@${data.account.acct}`);
+					history.pushState(data, "", `/@${parsedAccount.acct}`);
 				} else if(data.acct) {
 					history.pushState(data, "", `/@${data.acct}`);
 				} else {
