@@ -102,34 +102,7 @@ function switchView(data: ViewObject, isPoppingState: boolean = false) {
 			currentState = data;
 			let parsedAccount: mastodon.Account;
 			if(data.account) {
-				parsedAccount = JSON.parse(data.account, (key, value) => {
-					const urlKeys = [
-						"url",
-						"avatar",
-						"avatarStatic",
-						"header",
-						"headerStatic"
-					];
-					const dateKeys = [
-						"createdAt",
-						"lastStatusAt"
-					];
-
-					if(value != null) {
-						for(const urlKey of urlKeys) {
-							if(key == urlKey) {
-								return new URL(value);
-							}
-						}
-						for(const dateKey of dateKeys) {
-							if(key == dateKey) {
-								return new Date(value);
-							}
-						}
-					}
-
-					return value;
-				}) as mastodon.Account;
+				parsedAccount = JSON.parse(data.account, mastodon.AccountReviver);
 
 				console.log(data.account);
 				console.log(parsedAccount);

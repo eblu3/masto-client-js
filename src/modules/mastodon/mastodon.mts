@@ -1379,3 +1379,77 @@ export async function fetchFromInstance(
 
 	return fetch(endpoint, requestInit);
 }
+
+/** Reviver function for reading an account object from a string value via JSON.parse(). */
+export function AccountReviver(key: string, value: any): any {
+	const urlKeys = [
+		"url",
+		"avatar",
+		"avatarStatic",
+		"header",
+		"headerStatic"
+	];
+	const dateKeys = [
+		"createdAt",
+		"lastStatusAt"
+	];
+
+	if(value != null || undefined) {
+		if(key == "fields") {
+			const returnVal: Field[] = [];
+			for(const field of value) {
+				for(const [key, value] of Object.entries(field)) {
+					field[key] = FieldReviver(key, value);
+				}
+				returnVal.push(field);
+			}
+			return returnVal;
+		}
+		if(key == "emojis") {
+			const returnVal: CustomEmoji[] = [];
+			for(let emoji of value) {
+				for(const [key, value] of Object.entries(emoji)) {
+					emoji[key] = CustomEmojiReviver(key, value);
+				}
+				returnVal.push(emoji);
+			}
+			return returnVal;
+		}
+		if(key == "moved" && value.length != 0) {
+			for(const [key, val] of Object.entries(value)) {
+				value[key] = AccountReviver(key, val);
+			}
+			return value;
+		}
+		for(const urlKey of urlKeys) {
+			if(key == urlKey) {
+				return new URL(value);
+			}
+		}
+		for(const dateKey of dateKeys) {
+			if(key == dateKey) {
+				return new Date(value);
+			}
+		}
+	}
+
+	return value;
+}
+
+/** Reviver function for reading a custom emoji object from a string value via JSON.parse(). */
+export function CustomEmojiReviver(key: string, value: any): any {
+	if(key == "url" || key == "staticUrl") {
+		return new URL(value);
+	} else {
+		return value;
+	}
+}
+
+/** Reviver function for reading an account field object from a string value via JSON.parse(). */
+export function FieldReviver(key: string, value: any): any {
+	if(key == "verifiedAt" && value != null) {
+		return new Date(value);
+	} else {
+		return value;
+	}
+}
